@@ -1,18 +1,45 @@
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { logoutUser } from "../../services/authService";
+import CreateListingScreen from "./CreateListingScreen";
+import HostListingsScreen from "./HostListingsScreen";
 
 export default function HostHomeScreen() {
+  const [screen, setScreen] = useState("dashboard");
+
+  if (screen === "listings") {
+    return (
+      <HostListingsScreen
+        onCreatePress={() => setScreen("createListing")}
+        onBack={() => setScreen("dashboard")}
+      />
+    );
+  }
+
+  if (screen === "createListing") {
+    return (
+      <CreateListingScreen
+        onSaved={() => setScreen("listings")}
+        onCancel={() => setScreen("listings")}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.badge}>Host</Text>
       <Text style={styles.title}>Host Dashboard</Text>
       <Text style={styles.description}>
-        Next feature: create and manage property listings.
+        Create and manage property listings, then review guest booking requests.
       </Text>
 
-      <Pressable style={styles.button} onPress={logoutUser}>
-        <Text style={styles.buttonText}>Logout</Text>
+      <Pressable style={styles.button} onPress={() => setScreen("listings")}>
+        <Text style={styles.buttonText}>Manage Listings</Text>
+      </Pressable>
+
+      <Pressable style={styles.secondaryButton} onPress={logoutUser}>
+        <Text style={styles.secondaryButtonText}>Logout</Text>
       </Pressable>
     </View>
   );
@@ -56,5 +83,19 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "700",
     textAlign: "center",
+    fontSize: 16,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  secondaryButtonText: {
+    color: "#111827",
+    fontWeight: "700",
+    textAlign: "center",
+    fontSize: 16,
   },
 });
