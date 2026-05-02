@@ -7,7 +7,7 @@ import {
     query,
     serverTimestamp,
     updateDoc,
-    where
+    where,
 } from "firebase/firestore";
 
 import { db } from "../config/firebase";
@@ -72,4 +72,20 @@ export async function updateListing(listingId, listingData) {
  */
 export async function deleteListing(listingId) {
   await deleteDoc(doc(db, "listings", listingId));
+}
+/**
+ * Gets all active listings so guests can browse available properties.
+ */
+export async function getAllActiveListings() {
+  const listingsQuery = query(
+    collection(db, "listings"),
+    where("isActive", "==", true),
+  );
+
+  const snapshot = await getDocs(listingsQuery);
+
+  return snapshot.docs.map((listingDoc) => ({
+    id: listingDoc.id,
+    ...listingDoc.data(),
+  }));
 }

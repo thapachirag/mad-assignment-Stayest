@@ -1,8 +1,11 @@
-import { StyleSheet, Text, View } from "react-native";
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function ListingCard({ listing }) {
+export default function ListingCard({ listing, onPress }) {
+  const CardWrapper = onPress ? Pressable : View;
+
   return (
-    <View style={styles.card}>
+    <CardWrapper style={styles.card} onPress={onPress}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>{listing.title}</Text>
         <Text style={styles.price}>£{listing.nightlyRate}/night</Text>
@@ -28,7 +31,9 @@ export default function ListingCard({ listing }) {
           Amenities: {listing.amenities.join(", ")}
         </Text>
       ) : null}
-    </View>
+
+      {onPress ? <Text style={styles.viewDetails}>View details →</Text> : null}
+    </CardWrapper>
   );
 }
 
@@ -88,5 +93,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 13,
     color: "#6b7280",
+  },
+  viewDetails: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#2563eb",
   },
 });

@@ -1,18 +1,49 @@
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { logoutUser } from "../../services/authService";
+import GuestBrowseScreen from "./GuestBrowseScreen";
+import ListingDetailsScreen from "./ListingDetailsScreen";
 
 export default function GuestHomeScreen() {
+  const [screen, setScreen] = useState("dashboard");
+  const [selectedListing, setSelectedListing] = useState(null);
+
+  if (screen === "browse") {
+    return (
+      <GuestBrowseScreen
+        onBack={() => setScreen("dashboard")}
+        onSelectListing={(listing) => {
+          setSelectedListing(listing);
+          setScreen("details");
+        }}
+      />
+    );
+  }
+
+  if (screen === "details" && selectedListing) {
+    return (
+      <ListingDetailsScreen
+        listing={selectedListing}
+        onBack={() => setScreen("browse")}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.badge}>Guest</Text>
       <Text style={styles.title}>Guest Dashboard</Text>
       <Text style={styles.description}>
-        Next feature: browse property listings and submit booking requests.
+        Browse available properties, view details, and submit booking requests.
       </Text>
 
-      <Pressable style={styles.button} onPress={logoutUser}>
-        <Text style={styles.buttonText}>Logout</Text>
+      <Pressable style={styles.button} onPress={() => setScreen("browse")}>
+        <Text style={styles.buttonText}>Browse Listings</Text>
+      </Pressable>
+
+      <Pressable style={styles.secondaryButton} onPress={logoutUser}>
+        <Text style={styles.secondaryButtonText}>Logout</Text>
       </Pressable>
     </View>
   );
@@ -56,5 +87,19 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "700",
     textAlign: "center",
+    fontSize: 16,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  secondaryButtonText: {
+    color: "#111827",
+    fontWeight: "700",
+    textAlign: "center",
+    fontSize: 16,
   },
 });
