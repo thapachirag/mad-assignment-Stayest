@@ -6,10 +6,12 @@ import BookingRequestScreen from "./BookingRequestScreen";
 import GuestBookingsScreen from "./GuestBookingsScreen";
 import GuestBrowseScreen from "./GuestBrowseScreen";
 import ListingDetailsScreen from "./ListingDetailsScreen";
+import ReviewScreen from "./ReviewScreen";
 
 export default function GuestHomeScreen() {
   const [screen, setScreen] = useState("dashboard");
   const [selectedListing, setSelectedListing] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   if (screen === "browse") {
     return (
@@ -44,7 +46,25 @@ export default function GuestHomeScreen() {
   }
 
   if (screen === "bookings") {
-    return <GuestBookingsScreen onBack={() => setScreen("dashboard")} />;
+    return (
+      <GuestBookingsScreen
+        onBack={() => setScreen("dashboard")}
+        onLeaveReview={(booking) => {
+          setSelectedBooking(booking);
+          setScreen("review");
+        }}
+      />
+    );
+  }
+
+  if (screen === "review" && selectedBooking) {
+    return (
+      <ReviewScreen
+        booking={selectedBooking}
+        onBack={() => setScreen("bookings")}
+        onSubmitted={() => setScreen("bookings")}
+      />
+    );
   }
 
   return (

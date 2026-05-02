@@ -28,7 +28,7 @@ function getStatusLabel(status) {
   return labels[status] || status;
 }
 
-export default function GuestBookingsScreen({ onBack }) {
+export default function GuestBookingsScreen({ onBack, onLeaveReview }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,6 +116,14 @@ export default function GuestBookingsScreen({ onBack }) {
               </Text>
               <Text style={styles.timelineText}>3. Completed</Text>
             </View>
+            {item.status === "completed" ? (
+              <Pressable
+                style={styles.reviewButton}
+                onPress={() => onLeaveReview(item)}
+              >
+                <Text style={styles.reviewButtonText}>Leave Review</Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
       />
@@ -246,5 +254,16 @@ const styles = StyleSheet.create({
     color: "#111827",
     textAlign: "center",
     fontWeight: "700",
+  },
+  reviewButton: {
+    marginTop: 14,
+    backgroundColor: "#111827",
+    padding: 13,
+    borderRadius: 12,
+  },
+  reviewButtonText: {
+    color: "#ffffff",
+    textAlign: "center",
+    fontWeight: "800",
   },
 });
