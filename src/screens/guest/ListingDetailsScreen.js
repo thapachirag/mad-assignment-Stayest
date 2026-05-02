@@ -1,6 +1,10 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-export default function ListingDetailsScreen({ listing, onBack }) {
+export default function ListingDetailsScreen({
+  listing,
+  onBack,
+  onRequestBooking,
+}) {
   return (
     <ScrollView style={styles.wrapper} contentContainerStyle={styles.container}>
       <Text style={styles.title}>{listing.title}</Text>
@@ -55,7 +59,7 @@ export default function ListingDetailsScreen({ listing, onBack }) {
         </Text>
       </View>
 
-      <Pressable style={styles.primaryButton}>
+      <Pressable style={styles.primaryButton} onPress={onRequestBooking}>
         <Text style={styles.primaryButtonText}>Request Booking</Text>
       </Pressable>
 

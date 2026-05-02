@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { logoutUser } from "../../services/authService";
 import CreateListingScreen from "./CreateListingScreen";
+import HostBookingRequestsScreen from "./HostBookingRequestsScreen";
 import HostListingsScreen from "./HostListingsScreen";
 
 export default function HostHomeScreen() {
@@ -26,6 +27,10 @@ export default function HostHomeScreen() {
     );
   }
 
+  if (screen === "bookingRequests") {
+    return <HostBookingRequestsScreen onBack={() => setScreen("dashboard")} />;
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.badge}>Host</Text>
@@ -36,6 +41,13 @@ export default function HostHomeScreen() {
 
       <Pressable style={styles.button} onPress={() => setScreen("listings")}>
         <Text style={styles.buttonText}>Manage Listings</Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => setScreen("bookingRequests")}
+      >
+        <Text style={styles.secondaryButtonText}>Booking Requests</Text>
       </Pressable>
 
       <Pressable style={styles.secondaryButton} onPress={logoutUser}>

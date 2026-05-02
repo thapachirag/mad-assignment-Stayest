@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { logoutUser } from "../../services/authService";
+import BookingRequestScreen from "./BookingRequestScreen";
+import GuestBookingsScreen from "./GuestBookingsScreen";
 import GuestBrowseScreen from "./GuestBrowseScreen";
 import ListingDetailsScreen from "./ListingDetailsScreen";
 
@@ -26,8 +28,23 @@ export default function GuestHomeScreen() {
       <ListingDetailsScreen
         listing={selectedListing}
         onBack={() => setScreen("browse")}
+        onRequestBooking={() => setScreen("bookingRequest")}
       />
     );
+  }
+
+  if (screen === "bookingRequest" && selectedListing) {
+    return (
+      <BookingRequestScreen
+        listing={selectedListing}
+        onBack={() => setScreen("details")}
+        onSubmitted={() => setScreen("bookings")}
+      />
+    );
+  }
+
+  if (screen === "bookings") {
+    return <GuestBookingsScreen onBack={() => setScreen("dashboard")} />;
   }
 
   return (
@@ -40,6 +57,13 @@ export default function GuestHomeScreen() {
 
       <Pressable style={styles.button} onPress={() => setScreen("browse")}>
         <Text style={styles.buttonText}>Browse Listings</Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => setScreen("bookings")}
+      >
+        <Text style={styles.secondaryButtonText}>My Bookings</Text>
       </Pressable>
 
       <Pressable style={styles.secondaryButton} onPress={logoutUser}>
