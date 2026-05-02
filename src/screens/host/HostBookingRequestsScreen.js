@@ -34,7 +34,7 @@ function getStatusLabel(status) {
   return labels[status] || status;
 }
 
-export default function HostBookingRequestsScreen({ onBack }) {
+export default function HostBookingRequestsScreen({ onBack, onRaiseDispute }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -248,6 +248,15 @@ export default function HostBookingRequestsScreen({ onBack }) {
                   </Text>
                 </Pressable>
               ) : null}
+
+              {item.status === "completed" ? (
+                <Pressable
+                  style={styles.disputeButton}
+                  onPress={() => onRaiseDispute(item)}
+                >
+                  <Text style={styles.disputeButtonText}>Raise Dispute</Text>
+                </Pressable>
+              ) : null}
             </View>
           );
         }}
@@ -412,5 +421,16 @@ const styles = StyleSheet.create({
     color: "#111827",
     textAlign: "center",
     fontWeight: "700",
+  },
+  disputeButton: {
+    marginTop: 16,
+    backgroundColor: "#fee2e2",
+    padding: 13,
+    borderRadius: 12,
+  },
+  disputeButtonText: {
+    color: "#991b1b",
+    textAlign: "center",
+    fontWeight: "800",
   },
 });

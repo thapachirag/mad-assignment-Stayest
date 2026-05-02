@@ -1,18 +1,62 @@
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { logoutUser } from "../../services/authService";
+import AuditLogScreen from "./AuditLogScreen";
+import DisputeDetailScreen from "./DisputeDetailScreen";
+import DisputeListScreen from "./DisputeListScreen";
 
 export default function ModeratorHomeScreen() {
+  const [screen, setScreen] = useState("dashboard");
+  const [selectedDispute, setSelectedDispute] = useState(null);
+
+  if (screen === "disputes") {
+    return (
+      <DisputeListScreen
+        onBack={() => setScreen("dashboard")}
+        onSelectDispute={(dispute) => {
+          setSelectedDispute(dispute);
+          setScreen("disputeDetail");
+        }}
+      />
+    );
+  }
+
+  if (screen === "disputeDetail" && selectedDispute) {
+    return (
+      <DisputeDetailScreen
+        dispute={selectedDispute}
+        onBack={() => setScreen("disputes")}
+        onResolved={() => setScreen("disputes")}
+      />
+    );
+  }
+
+  if (screen === "auditLogs") {
+    return <AuditLogScreen onBack={() => setScreen("dashboard")} />;
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.badge}>Moderator</Text>
       <Text style={styles.title}>Moderator Dashboard</Text>
       <Text style={styles.description}>
-        Next feature: review and resolve disputed bookings.
+        Review disputes, close or escalate cases, and inspect audit logs.
       </Text>
 
-      <Pressable style={styles.button} onPress={logoutUser}>
-        <Text style={styles.buttonText}>Logout</Text>
+      <Pressable style={styles.button} onPress={() => setScreen("disputes")}>
+        <Text style={styles.buttonText}>Review Disputes</Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => setScreen("auditLogs")}
+      >
+        <Text style={styles.secondaryButtonText}>Audit Logs</Text>
+      </Pressable>
+
+      <Pressable style={styles.secondaryButton} onPress={logoutUser}>
+        <Text style={styles.secondaryButtonText}>Logout</Text>
       </Pressable>
     </View>
   );
@@ -56,5 +100,19 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "700",
     textAlign: "center",
+    fontSize: 16,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  secondaryButtonText: {
+    color: "#111827",
+    fontWeight: "700",
+    textAlign: "center",
+    fontSize: 16,
   },
 });

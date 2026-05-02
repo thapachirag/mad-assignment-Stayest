@@ -5,9 +5,11 @@ import { logoutUser } from "../../services/authService";
 import CreateListingScreen from "./CreateListingScreen";
 import HostBookingRequestsScreen from "./HostBookingRequestsScreen";
 import HostListingsScreen from "./HostListingsScreen";
+import RaiseDisputeScreen from "./RaiseDisputeScreen";
 
 export default function HostHomeScreen() {
   const [screen, setScreen] = useState("dashboard");
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   if (screen === "listings") {
     return (
@@ -28,7 +30,25 @@ export default function HostHomeScreen() {
   }
 
   if (screen === "bookingRequests") {
-    return <HostBookingRequestsScreen onBack={() => setScreen("dashboard")} />;
+    return (
+      <HostBookingRequestsScreen
+        onBack={() => setScreen("dashboard")}
+        onRaiseDispute={(booking) => {
+          setSelectedBooking(booking);
+          setScreen("raiseDispute");
+        }}
+      />
+    );
+  }
+
+  if (screen === "raiseDispute" && selectedBooking) {
+    return (
+      <RaiseDisputeScreen
+        booking={selectedBooking}
+        onBack={() => setScreen("bookingRequests")}
+        onSubmitted={() => setScreen("bookingRequests")}
+      />
+    );
   }
 
   return (
