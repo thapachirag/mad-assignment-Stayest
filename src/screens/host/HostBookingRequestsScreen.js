@@ -1,38 +1,25 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Pressable,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
+import BookingCard from "../../components/BookingCard";
+import EmptyState from "../../components/EmptyState";
+import InnerScreenHeader from "../../components/InnerScreenHeader";
 import { auth } from "../../config/firebase";
 import {
-    approveBookingRequest,
-    completeBooking,
-    declineBookingRequest,
-    getBookingsByHost,
+  approveBookingRequest,
+  completeBooking,
+  declineBookingRequest,
+  getBookingsByHost,
 } from "../../services/bookingService";
-import { getCheckInIndicator } from "../../utils/dateUtils";
-
-function getStatusLabel(status) {
-  const labels = {
-    requested: "Requested",
-    approved: "Approved",
-    declined: "Declined",
-    confirmed: "Confirmed",
-    checkedIn: "Checked-In",
-    checkedOut: "Checked-Out",
-    completed: "Completed",
-    disputed: "Disputed",
-  };
-
-  return labels[status] || status;
-}
+import { colors, spacing } from "../../theme/theme";
 
 export default function HostBookingRequestsScreen({ onBack, onRaiseDispute }) {
   const [bookings, setBookings] = useState([]);
@@ -72,23 +59,33 @@ export default function HostBookingRequestsScreen({ onBack, onRaiseDispute }) {
       return;
     }
 
-    try {
-      setUpdatingBookingId(booking.id);
-      await approveBookingRequest({
-        booking,
-        hostId: currentUser.uid,
-      });
+    Alert.alert(
+      "Approve Booking",
+      "Are you sure you want to approve this booking request?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Approve",
+          onPress: async () => {
+            try {
+              setUpdatingBookingId(booking.id);
 
-      Alert.alert(
-        "Booking approved",
-        "The guest booking request has been approved.",
-      );
-      await loadBookings();
-    } catch (error) {
-      Alert.alert("Approval failed", error.message);
-    } finally {
-      setUpdatingBookingId(null);
-    }
+              await approveBookingRequest({
+                booking,
+                hostId: currentUser.uid,
+              });
+
+              Alert.alert("Booking approved", "The request has been approved.");
+              await loadBookings();
+            } catch (error) {
+              Alert.alert("Approval failed", error.message);
+            } finally {
+              setUpdatingBookingId(null);
+            }
+          },
+        },
+      ],
+    );
   }
 
   async function handleDecline(booking) {
@@ -99,23 +96,34 @@ export default function HostBookingRequestsScreen({ onBack, onRaiseDispute }) {
       return;
     }
 
-    try {
-      setUpdatingBookingId(booking.id);
-      await declineBookingRequest({
-        booking,
-        hostId: currentUser.uid,
-      });
+    Alert.alert(
+      "Decline Booking",
+      "Are you sure you want to decline this booking request?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Decline",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setUpdatingBookingId(booking.id);
 
-      Alert.alert(
-        "Booking declined",
-        "The guest booking request has been declined.",
-      );
-      await loadBookings();
-    } catch (error) {
-      Alert.alert("Decline failed", error.message);
-    } finally {
-      setUpdatingBookingId(null);
-    }
+              await declineBookingRequest({
+                booking,
+                hostId: currentUser.uid,
+              });
+
+              Alert.alert("Booking declined", "The request has been declined.");
+              await loadBookings();
+            } catch (error) {
+              Alert.alert("Decline failed", error.message);
+            } finally {
+              setUpdatingBookingId(null);
+            }
+          },
+        },
+      ],
+    );
   }
 
   async function handleComplete(booking) {
@@ -126,23 +134,33 @@ export default function HostBookingRequestsScreen({ onBack, onRaiseDispute }) {
       return;
     }
 
-    try {
-      setUpdatingBookingId(booking.id);
-      await completeBooking({
-        booking,
-        hostId: currentUser.uid,
-      });
+    Alert.alert(
+      "Complete Booking",
+      "Mark this booking as completed after checkout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Complete",
+          onPress: async () => {
+            try {
+              setUpdatingBookingId(booking.id);
 
-      Alert.alert(
-        "Booking completed",
-        "The booking has been marked as completed.",
-      );
-      await loadBookings();
-    } catch (error) {
-      Alert.alert("Completion failed", error.message);
-    } finally {
-      setUpdatingBookingId(null);
-    }
+              await completeBooking({
+                booking,
+                hostId: currentUser.uid,
+              });
+
+              Alert.alert("Booking completed", "The stay has been completed.");
+              await loadBookings();
+            } catch (error) {
+              Alert.alert("Completion failed", error.message);
+            } finally {
+              setUpdatingBookingId(null);
+            }
+          },
+        },
+      ],
+    );
   }
 
   if (loading) {
@@ -156,10 +174,11 @@ export default function HostBookingRequestsScreen({ onBack, onRaiseDispute }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Booking Requests</Text>
-      <Text style={styles.subtitle}>
-        Review guest requests and approve, decline, or complete stays.
-      </Text>
+      <InnerScreenHeader
+        title="Booking Requests"
+        subtitle="Review guest requests, approve or decline them, complete stays, and raise disputes."
+        onBack={onBack}
+      />
 
       <FlatList
         data={bookings}
@@ -169,102 +188,23 @@ export default function HostBookingRequestsScreen({ onBack, onRaiseDispute }) {
         }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>No booking requests</Text>
-            <Text style={styles.emptyText}>
-              Guest booking requests for your listings will appear here.
-            </Text>
-          </View>
+          <EmptyState
+            title="No booking requests"
+            message="Guest booking requests for your listings will appear here."
+          />
         }
-        renderItem={({ item }) => {
-          const isUpdating = updatingBookingId === item.id;
-
-          return (
-            <View style={styles.card}>
-              <View style={styles.row}>
-                <Text style={styles.cardTitle}>{item.listingTitle}</Text>
-                <Text style={styles.status}>{getStatusLabel(item.status)}</Text>
-              </View>
-
-              <Text style={styles.dateText}>
-                {item.checkInDate} to {item.checkOutDate}
-              </Text>
-
-              <Text style={styles.metaText}>
-                Guests: {item.numberOfGuests} • Nights: {item.nights}
-              </Text>
-
-              <Text style={styles.metaText}>
-                Total price: £{item.totalPrice}
-              </Text>
-
-              {item.notes ? (
-                <Text style={styles.notes}>Guest note: {item.notes}</Text>
-              ) : null}
-
-              <Text style={styles.indicator}>
-                {getCheckInIndicator(item.checkInDate, item.checkOutDate)}
-              </Text>
-
-              {item.status === "requested" ? (
-                <View style={styles.actionRow}>
-                  <Pressable
-                    style={[
-                      styles.approveButton,
-                      isUpdating && styles.disabledButton,
-                    ]}
-                    onPress={() => handleApprove(item)}
-                    disabled={isUpdating}
-                  >
-                    <Text style={styles.approveButtonText}>
-                      {isUpdating ? "Updating..." : "Approve"}
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={[
-                      styles.declineButton,
-                      isUpdating && styles.disabledButton,
-                    ]}
-                    onPress={() => handleDecline(item)}
-                    disabled={isUpdating}
-                  >
-                    <Text style={styles.declineButtonText}>Decline</Text>
-                  </Pressable>
-                </View>
-              ) : null}
-
-              {item.status === "approved" ? (
-                <Pressable
-                  style={[
-                    styles.completeButton,
-                    isUpdating && styles.disabledButton,
-                  ]}
-                  onPress={() => handleComplete(item)}
-                  disabled={isUpdating}
-                >
-                  <Text style={styles.completeButtonText}>
-                    {isUpdating ? "Updating..." : "Mark as Completed"}
-                  </Text>
-                </Pressable>
-              ) : null}
-
-              {item.status === "completed" ? (
-                <Pressable
-                  style={styles.disputeButton}
-                  onPress={() => onRaiseDispute(item)}
-                >
-                  <Text style={styles.disputeButtonText}>Raise Dispute</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          );
-        }}
+        renderItem={({ item }) => (
+          <BookingCard
+            booking={item}
+            mode="host"
+            updating={updatingBookingId === item.id}
+            onApprove={() => handleApprove(item)}
+            onDecline={() => handleDecline(item)}
+            onComplete={() => handleComplete(item)}
+            onRaiseDispute={() => onRaiseDispute(item)}
+          />
+        )}
       />
-
-      <Pressable style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backButtonText}>Back to Dashboard</Text>
-      </Pressable>
     </View>
   );
 }
@@ -272,165 +212,20 @@ export default function HostBookingRequestsScreen({ onBack, onRaiseDispute }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    paddingTop: 64,
-    backgroundColor: "#f9fafb",
+    padding: spacing.xl,
+    backgroundColor: colors.background,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
-    color: "#6b7280",
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  subtitle: {
-    marginTop: 6,
-    marginBottom: 16,
-    fontSize: 15,
-    color: "#6b7280",
-    lineHeight: 21,
+    color: colors.textSecondary,
   },
   listContent: {
-    paddingBottom: 24,
-  },
-  card: {
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  status: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#1d4ed8",
-  },
-  dateText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#374151",
-    fontWeight: "700",
-  },
-  metaText: {
-    marginTop: 6,
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  notes: {
-    marginTop: 10,
-    fontSize: 14,
-    color: "#374151",
-    backgroundColor: "#f3f4f6",
-    padding: 10,
-    borderRadius: 10,
-  },
-  indicator: {
-    marginTop: 10,
-    fontSize: 14,
-    color: "#047857",
-    fontWeight: "800",
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 16,
-  },
-  approveButton: {
-    flex: 1,
-    backgroundColor: "#047857",
-    padding: 13,
-    borderRadius: 12,
-  },
-  approveButtonText: {
-    color: "#ffffff",
-    textAlign: "center",
-    fontWeight: "800",
-  },
-  declineButton: {
-    flex: 1,
-    backgroundColor: "#fee2e2",
-    padding: 13,
-    borderRadius: 12,
-  },
-  declineButtonText: {
-    color: "#991b1b",
-    textAlign: "center",
-    fontWeight: "800",
-  },
-  completeButton: {
-    marginTop: 16,
-    backgroundColor: "#111827",
-    padding: 13,
-    borderRadius: 12,
-  },
-  completeButtonText: {
-    color: "#ffffff",
-    textAlign: "center",
-    fontWeight: "800",
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  emptyBox: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    padding: 20,
-    marginTop: 20,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 6,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: "#6b7280",
-    lineHeight: 20,
-  },
-  backButton: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-  },
-  backButtonText: {
-    color: "#111827",
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  disputeButton: {
-    marginTop: 16,
-    backgroundColor: "#fee2e2",
-    padding: 13,
-    borderRadius: 12,
-  },
-  disputeButtonText: {
-    color: "#991b1b",
-    textAlign: "center",
-    fontWeight: "800",
+    paddingBottom: 40,
   },
 });
