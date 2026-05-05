@@ -100,6 +100,12 @@ export default function CreateListingScreen({
     initialListing?.maxGuests ? String(initialListing.maxGuests) : "2",
   );
 
+  const [minimumStayNights, setMinimumStayNights] = useState(
+    initialListing?.minimumStayNights
+      ? String(initialListing.minimumStayNights)
+      : "1",
+  );
+
   const [amenitiesText, setAmenitiesText] = useState(
     initialListing?.amenities?.length
       ? initialListing.amenities.join(", ")
@@ -195,6 +201,10 @@ export default function CreateListingScreen({
       nextErrors.maxGuests = "Maximum guests must be greater than 0.";
     }
 
+    if (!minimumStayNights || Number(minimumStayNights) <= 0) {
+      nextErrors.minimumStayNights = "Minimum stay must be at least 1 night.";
+    }
+
     if (availableFrom >= availableTo) {
       nextErrors.dates = "Available To date must be after Available From date.";
     }
@@ -228,6 +238,7 @@ export default function CreateListingScreen({
       nightlyRate: Number(nightlyRate),
       cleaningFee: Number(cleaningFee),
       maxGuests: Number(maxGuests),
+      minimumStayNights: Number(minimumStayNights),
       amenities,
       houseRules: houseRules.trim(),
       cancellationPolicy: cancellationPolicy.trim(),
@@ -377,7 +388,7 @@ export default function CreateListingScreen({
 
         <FormSection
           title="Pricing and Capacity"
-          subtitle="Set your nightly price, cleaning fee, and guest capacity."
+          subtitle="Set your nightly price, cleaning fee, guest capacity, and minimum stay rule."
         >
           <View style={styles.twoColumnRow}>
             <View style={styles.column}>
@@ -425,6 +436,25 @@ export default function CreateListingScreen({
           />
           {errors.maxGuests ? (
             <Text style={styles.errorText}>{errors.maxGuests}</Text>
+          ) : null}
+
+          <FieldLabel>Minimum Stay Nights</FieldLabel>
+          <TextInput
+            style={[
+              styles.input,
+              errors.minimumStayNights && styles.fieldError,
+            ]}
+            value={minimumStayNights}
+            onChangeText={(value) => {
+              setMinimumStayNights(value.replace(/[^0-9]/g, ""));
+              clearError("minimumStayNights");
+            }}
+            keyboardType="number-pad"
+            placeholder="1"
+            placeholderTextColor={colors.textMuted}
+          />
+          {errors.minimumStayNights ? (
+            <Text style={styles.errorText}>{errors.minimumStayNights}</Text>
           ) : null}
         </FormSection>
 
@@ -514,6 +544,7 @@ export default function CreateListingScreen({
             value={amenitiesText}
             onChangeText={setAmenitiesText}
             placeholder="WiFi, Kitchen, Parking"
+            placeholderTextColor={colors.textMuted}
           />
 
           <FieldLabel>House Rules</FieldLabel>
@@ -653,13 +684,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: 0,
+    padding: spacing.sm,
   },
   datePicker: {
     backgroundColor: "#ffffff",
     width: "100%",
-    alignSelf: "stretch",
+    height: Platform.OS === "ios" ? 180 : undefined,
   },
   doneButton: {
     backgroundColor: colors.primary,

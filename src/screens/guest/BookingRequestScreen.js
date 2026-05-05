@@ -21,9 +21,9 @@ import { formatPrice } from "../../utils/currencyUtils";
 import { isValidDateRange } from "../../utils/dateUtils";
 import { calculateBookingPrice } from "../../utils/priceUtils";
 
-function FormSection({ title, subtitle, children }) {
+function FormSection({ title, subtitle, children, onLayout }) {
   return (
-    <View style={styles.sectionCard}>
+    <View style={styles.sectionCard} onLayout={onLayout}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
       {children}
@@ -73,10 +73,18 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
   const [errors, setErrors] = useState({});
 
   const guestShakeAnim = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef(null);
+  const sectionPositionsRef = useRef({
+    dates: 0,
+    guests: 0,
+  });
 
   const availableFromDate = parseDateString(listing.availableFrom);
   const availableToDate = parseDateString(listing.availableTo);
   const currentCheckInDate = parseDateString(checkInDate);
+  const currentCheckOutDate = parseDateString(checkOutDate);
+
+  const minimumStayNights = Number(listing.minimumStayNights || 1);
 
   const priceBreakdown = useMemo(() => {
     if (!isValidDateRange(checkInDate, checkOutDate)) {
@@ -90,6 +98,17 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
       checkOutDate,
     });
   }, [listing, checkInDate, checkOutDate]);
+
+  function scrollToSection(sectionName) {
+    const yPosition = sectionPositionsRef.current[sectionName] || 0;
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(yPosition - 20, 0),
+        animated: true,
+      });
+    }, 100);
+  }
 
   function triggerGuestShake() {
     guestShakeAnim.setValue(0);
@@ -125,6 +144,84 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
       return updatedErrors;
     });
   }
+
+  function getDateError(nextCheckInDate, nextCheckOutDate) {
+    if (!nextCheckInDate || !nextCheckOutDate) {
+      return "Please select check-in and check-out dates.";
+    }
+
+    if (!isValidDateRange(nextCheckInDate, nextCheckOutDate)) {
+      return "Check-out date must be after check-in date.";
+    }
+
+    if (
+      nextCheckInDate < listing.availableFrom ||
+      nextCheckOutDate > listing.availableTo
+    ) {
+      return `This listing is available from ${listing.availableFrom} to ${listing.availableTo}.`;
+    }
+
+    const nextPriceBreakdown = calculateBookingPrice({
+      nightlyRate: listing.nightlyRate,
+      cleaningFee: listing.cleaningFee,
+      checkInDate: nextCheckInDate,
+      checkOutDate: nextCheckOutDate,
+    });
+
+    if (nextPriceBreakdown.nights < minimumStayNights) {
+      return `This listing requires a minimum stay of ${minimumStayNights} night(s).`;
+    }
+
+    return null;
+  }
+
+  function setDateErrorIfNeeded(nextCheckInDate, nextCheckOutDate) {
+    const dateError = getDateError(nextCheckInDate, nextCheckOutDate);
+
+    setErrors((currentErrors) => {
+      const updatedErrors = { ...currentErrors };
+
+      if (dateError) {
+        updatedErrors.dates = dateError;
+      } else {
+        delete updatedErrors.dates;
+      }
+
+      return updatedErrors;
+    });
+  }
+
+  function handleDateChange(event, selectedDate) {
+    const pickerType = activeDatePicker;
+
+    if (Platform.OS === "android") {
+      setActiveDatePicker(null);
+    }
+
+    if (!selectedDate || !pickerType) {
+      return;
+    }
+
+    const formattedDate = formatDate(selectedDate);
+
+    if (pickerType === "checkIn") {
+      let nextCheckOutDate = checkOutDate;
+
+      if (currentCheckOutDate <= selectedDate) {
+        nextCheckOutDate = formatDate(addDays(selectedDate, 1));
+        setCheckOutDate(nextCheckOutDate);
+      }
+
+      setCheckInDate(formattedDate);
+      setDateErrorIfNeeded(formattedDate, nextCheckOutDate);
+    }
+
+    if (pickerType === "checkOut") {
+      setCheckOutDate(formattedDate);
+      setDateErrorIfNeeded(checkInDate, formattedDate);
+    }
+  }
+
   function validateGuestCount(value) {
     const cleanedValue = value.replace(/[^0-9]/g, "");
     setNumberOfGuests(cleanedValue);
@@ -157,49 +254,13 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
     clearError("numberOfGuests");
   }
 
-  function handleDateChange(event, selectedDate) {
-    const pickerType = activeDatePicker;
-
-    if (Platform.OS === "android") {
-      setActiveDatePicker(null);
-    }
-
-    if (!selectedDate || !pickerType) {
-      return;
-    }
-
-    const formattedDate = formatDate(selectedDate);
-
-    if (pickerType === "checkIn") {
-      setCheckInDate(formattedDate);
-
-      const existingCheckOutDate = parseDateString(checkOutDate);
-
-      if (existingCheckOutDate <= selectedDate) {
-        setCheckOutDate(formatDate(addDays(selectedDate, 1)));
-      }
-
-      clearError("dates");
-    }
-
-    if (pickerType === "checkOut") {
-      setCheckOutDate(formattedDate);
-      clearError("dates");
-    }
-  }
-
   function validateForm() {
     const nextErrors = {};
 
-    if (!checkInDate || !checkOutDate) {
-      nextErrors.dates = "Please select check-in and check-out dates.";
-    } else if (!isValidDateRange(checkInDate, checkOutDate)) {
-      nextErrors.dates = "Check-out date must be after check-in date.";
-    } else if (
-      checkInDate < listing.availableFrom ||
-      checkOutDate > listing.availableTo
-    ) {
-      nextErrors.dates = `This listing is available from ${listing.availableFrom} to ${listing.availableTo}.`;
+    const dateError = getDateError(checkInDate, checkOutDate);
+
+    if (dateError) {
+      nextErrors.dates = dateError;
     }
 
     if (!numberOfGuests || Number(numberOfGuests) <= 0) {
@@ -209,6 +270,12 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
     }
 
     setErrors(nextErrors);
+
+    if (nextErrors.dates) {
+      scrollToSection("dates");
+    } else if (nextErrors.numberOfGuests) {
+      scrollToSection("guests");
+    }
 
     if (nextErrors.numberOfGuests) {
       triggerGuestShake();
@@ -260,6 +327,7 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -286,6 +354,9 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
               <Text style={styles.propertyMeta}>
                 Max {listing.maxGuests} guests
               </Text>
+              <Text style={styles.propertyMeta}>
+                Min {minimumStayNights} night(s)
+              </Text>
             </View>
           </View>
         </View>
@@ -293,6 +364,9 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
         <FormSection
           title="Stay Dates"
           subtitle={`Available from ${listing.availableFrom} to ${listing.availableTo}`}
+          onLayout={(event) => {
+            sectionPositionsRef.current.dates = event.nativeEvent.layout.y;
+          }}
         >
           <View style={styles.twoColumnRow}>
             <View style={styles.column}>
@@ -300,7 +374,6 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
               <Pressable
                 style={[styles.dateButton, errors.dates && styles.fieldError]}
                 onPress={() => {
-                  clearError("dates");
                   setActiveDatePicker("checkIn");
                 }}
               >
@@ -314,7 +387,6 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
               <Pressable
                 style={[styles.dateButton, errors.dates && styles.fieldError]}
                 onPress={() => {
-                  clearError("dates");
                   setActiveDatePicker("checkOut");
                 }}
               >
@@ -328,7 +400,8 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
             <Text style={styles.errorText}>{errors.dates}</Text>
           ) : (
             <Text style={styles.helperText}>
-              Select dates from the calendar. Check-out must be after check-in.
+              Select dates from the calendar. This listing requires a minimum
+              stay of {minimumStayNights} night(s).
             </Text>
           )}
 
@@ -370,6 +443,9 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
         <FormSection
           title="Guests"
           subtitle={`This property allows up to ${listing.maxGuests} guest(s).`}
+          onLayout={(event) => {
+            sectionPositionsRef.current.guests = event.nativeEvent.layout.y;
+          }}
         >
           <FieldLabel>Number of Guests</FieldLabel>
 
@@ -391,6 +467,7 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
               onChangeText={validateGuestCount}
               keyboardType="number-pad"
               placeholder="2"
+              placeholderTextColor={colors.textMuted}
             />
           </Animated.View>
 
@@ -409,6 +486,7 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
             onChangeText={setNotes}
             multiline
             placeholder="Write optional note..."
+            placeholderTextColor={colors.textMuted}
           />
         </FormSection>
 
@@ -589,13 +667,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: 0,
+    padding: spacing.sm,
   },
   datePicker: {
     backgroundColor: "#ffffff",
     width: "100%",
-    alignSelf: "stretch",
+    height: Platform.OS === "ios" ? 180 : undefined,
   },
   doneButton: {
     backgroundColor: colors.primary,
@@ -627,12 +704,26 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 18,
   },
+  fieldError: {
+    borderColor: colors.danger,
+    borderWidth: 2,
+    backgroundColor: "#fff5f5",
+  },
+  errorText: {
+    marginTop: 7,
+    fontSize: 12,
+    color: colors.danger,
+    fontWeight: "900",
+    lineHeight: 18,
+  },
   priceLine: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: spacing.sm,
+    gap: spacing.md,
   },
   priceLabel: {
+    flex: 1,
     fontSize: 14,
     color: colors.textSecondary,
     fontWeight: "700",
@@ -708,18 +799,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 16,
     fontWeight: "900",
-  },
-  fieldError: {
-    borderColor: colors.danger,
-    borderWidth: 2,
-    backgroundColor: "#fff5f5",
-  },
-
-  errorText: {
-    marginTop: 7,
-    fontSize: 12,
-    color: colors.danger,
-    fontWeight: "900",
-    lineHeight: 18,
   },
 });
