@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, radius, spacing } from "../theme/theme";
+import { formatPrice } from "../utils/currencyUtils";
 import { getCheckInIndicator } from "../utils/dateUtils";
 import BookingTimeline from "./BookingTimeline";
 import StatusBadge from "./StatusBadge";
@@ -42,7 +43,9 @@ export default function BookingCard({
         </View>
 
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>£{booking.totalPrice}</Text>
+          <Text style={styles.summaryValue}>
+            {formatPrice(booking.totalPrice)}
+          </Text>
           <Text style={styles.summaryLabel}>Total</Text>
         </View>
       </View>

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, radius, spacing } from "../theme/theme";
+import { formatPrice } from "../utils/currencyUtils";
 
 export default function PropertyCarouselCard({ listing, onView }) {
   const amenitiesCount = listing.amenities?.length || 0;
@@ -22,7 +23,7 @@ export default function PropertyCarouselCard({ listing, onView }) {
         </Text>
 
         <View style={styles.priceRow}>
-          <Text style={styles.price}>£{listing.nightlyRate}</Text>
+          <Text style={styles.price}>{formatPrice(listing.nightlyRate)}</Text>
           <Text style={styles.priceSuffix}>/ night</Text>
         </View>
 

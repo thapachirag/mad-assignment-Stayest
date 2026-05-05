@@ -18,6 +18,7 @@ import {
   getListingsByHost,
 } from "../../services/listingService";
 import { colors, radius, spacing } from "../../theme/theme";
+import { formatPrice } from "../../utils/currencyUtils";
 
 function HostListingCard({ listing, onEdit }) {
   const amenitiesCount = listing.amenities?.length || 0;
@@ -41,7 +42,7 @@ function HostListingCard({ listing, onEdit }) {
           </View>
 
           <View style={styles.priceBadge}>
-            <Text style={styles.price}>£{listing.nightlyRate}</Text>
+            <Text style={styles.price}>{formatPrice(listing.nightlyRate)}</Text>
             <Text style={styles.priceLabel}>night</Text>
           </View>
         </View>
@@ -63,7 +64,9 @@ function HostListingCard({ listing, onEdit }) {
 
           <View style={styles.metaPill}>
             <Text style={styles.metaIcon}>🧾</Text>
-            <Text style={styles.metaText}>£{listing.cleaningFee} cleaning</Text>
+            <Text style={styles.metaText}>
+              {formatPrice(listing.cleaningFee)} cleaning
+            </Text>
           </View>
         </View>
 

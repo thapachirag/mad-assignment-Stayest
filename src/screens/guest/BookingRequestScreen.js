@@ -17,6 +17,7 @@ import InnerScreenHeader from "../../components/InnerScreenHeader";
 import { auth } from "../../config/firebase";
 import { createBookingRequest } from "../../services/bookingService";
 import { colors, radius, spacing } from "../../theme/theme";
+import { formatPrice } from "../../utils/currencyUtils";
 import { isValidDateRange } from "../../utils/dateUtils";
 import { calculateBookingPrice } from "../../utils/priceUtils";
 
@@ -280,7 +281,7 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
 
             <View style={styles.propertyMetaRow}>
               <Text style={styles.propertyMeta}>
-                £{listing.nightlyRate}/night
+                {formatPrice(listing.nightlyRate)}/night
               </Text>
               <Text style={styles.propertyMeta}>
                 Max {listing.maxGuests} guests
@@ -416,17 +417,18 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
             <View>
               <View style={styles.priceLine}>
                 <Text style={styles.priceLabel}>
-                  £{listing.nightlyRate} × {priceBreakdown.nights} night(s)
+                  {formatPrice(listing.nightlyRate)} × {priceBreakdown.nights}{" "}
+                  night(s)
                 </Text>
                 <Text style={styles.priceValue}>
-                  £{priceBreakdown.nightlyTotal}
+                  {formatPrice(priceBreakdown.nightlyTotal)}
                 </Text>
               </View>
 
               <View style={styles.priceLine}>
                 <Text style={styles.priceLabel}>Cleaning fee</Text>
                 <Text style={styles.priceValue}>
-                  £{priceBreakdown.cleaningFee}
+                  {formatPrice(priceBreakdown.cleaningFee)}
                 </Text>
               </View>
 
@@ -435,7 +437,7 @@ export default function BookingRequestScreen({ listing, onBack, onSubmitted }) {
               <View style={styles.totalLine}>
                 <Text style={styles.totalLabel}>Total</Text>
                 <Text style={styles.totalValue}>
-                  £{priceBreakdown.totalPrice}
+                  {formatPrice(priceBreakdown.totalPrice)}
                 </Text>
               </View>
             </View>

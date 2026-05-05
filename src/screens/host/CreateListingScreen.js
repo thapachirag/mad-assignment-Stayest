@@ -89,11 +89,11 @@ export default function CreateListingScreen({
   );
 
   const [nightlyRate, setNightlyRate] = useState(
-    initialListing?.nightlyRate ? String(initialListing.nightlyRate) : "75",
+    initialListing?.nightlyRate ? String(initialListing.nightlyRate) : "3500",
   );
 
   const [cleaningFee, setCleaningFee] = useState(
-    initialListing?.cleaningFee ? String(initialListing.cleaningFee) : "20",
+    initialListing?.cleaningFee ? String(initialListing.cleaningFee) : "500",
   );
 
   const [maxGuests, setMaxGuests] = useState(
@@ -381,7 +381,7 @@ export default function CreateListingScreen({
         >
           <View style={styles.twoColumnRow}>
             <View style={styles.column}>
-              <FieldLabel>Nightly Rate (£)</FieldLabel>
+              <FieldLabel>Nightly Rate (NPR)</FieldLabel>
               <TextInput
                 style={[styles.input, errors.nightlyRate && styles.fieldError]}
                 value={nightlyRate}
@@ -397,7 +397,7 @@ export default function CreateListingScreen({
             </View>
 
             <View style={styles.column}>
-              <FieldLabel>Cleaning Fee (£)</FieldLabel>
+              <FieldLabel>Cleaning Fee (NPR)</FieldLabel>
               <TextInput
                 style={[styles.input, errors.cleaningFee && styles.fieldError]}
                 value={cleaningFee}

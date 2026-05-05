@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -27,13 +28,52 @@ function AuditLogCard({ log }) {
         <Text style={styles.metaText}>Role: {log.role}</Text>
         <Text style={styles.metaText}>Entity: {log.entityType}</Text>
         <Text style={styles.metaText}>Entity ID: {log.entityId}</Text>
+        <Text style={styles.metaText}>User ID: {log.userId}</Text>
       </View>
     </View>
   );
 }
 
+function SummaryFilterCard({ label, value, role, selectedRole, onPress }) {
+  const isSelected = selectedRole === role;
+
+  return (
+    <Pressable
+      style={[styles.summaryCard, isSelected && styles.selectedSummaryCard]}
+      onPress={onPress}
+    >
+      <Text
+        style={[styles.summaryValue, isSelected && styles.selectedSummaryValue]}
+      >
+        {value}
+      </Text>
+
+      <Text
+        style={[styles.summaryLabel, isSelected && styles.selectedSummaryLabel]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function getCreatedAtMillis(log) {
+  if (!log.createdAt) return 0;
+
+  if (typeof log.createdAt.toMillis === "function") {
+    return log.createdAt.toMillis();
+  }
+
+  if (log.createdAt.seconds) {
+    return log.createdAt.seconds * 1000;
+  }
+
+  return 0;
+}
+
 export default function AuditLogScreen({ onBack }) {
   const [logs, setLogs] = useState([]);
+  const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -42,12 +82,17 @@ export default function AuditLogScreen({ onBack }) {
       const logsQuery = query(collection(db, "auditLogs"));
       const snapshot = await getDocs(logsQuery);
 
-      const results = snapshot.docs.map((logDoc) => ({
-        id: logDoc.id,
-        ...logDoc.data(),
-      }));
+      const results = snapshot.docs
+        .map((logDoc) => ({
+          id: logDoc.id,
+          ...logDoc.data(),
+        }))
+        .sort((a, b) => getCreatedAtMillis(b) - getCreatedAtMillis(a));
 
       setLogs(results);
+    } catch (error) {
+      console.log("Failed to load audit logs:", error);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -63,15 +108,40 @@ export default function AuditLogScreen({ onBack }) {
     setRefreshing(false);
   }
 
-  const summary = useMemo(() => {
-    const guestActions = logs.filter((item) => item.role === "guest").length;
-    const hostActions = logs.filter((item) => item.role === "host").length;
-    const moderatorActions = logs.filter(
-      (item) => item.role === "moderator",
-    ).length;
+  function handleFilterPress(role) {
+    setSelectedRole((currentRole) => (currentRole === role ? null : role));
+  }
 
-    return { guestActions, hostActions, moderatorActions };
+  const summary = useMemo(() => {
+    const guest = logs.filter((item) => item.role === "guest").length;
+    const host = logs.filter((item) => item.role === "host").length;
+    const moderator = logs.filter((item) => item.role === "moderator").length;
+
+    return { guest, host, moderator };
   }, [logs]);
+
+  const filteredLogs = useMemo(() => {
+    if (!selectedRole) {
+      return logs;
+    }
+
+    return logs.filter((item) => item.role === selectedRole);
+  }, [logs, selectedRole]);
+
+  function getEmptyTitle() {
+    if (selectedRole === "guest") return "No guest audit logs";
+    if (selectedRole === "host") return "No host audit logs";
+    if (selectedRole === "moderator") return "No moderator audit logs";
+    return "No audit logs";
+  }
+
+  function getEmptyMessage() {
+    if (selectedRole) {
+      return "No audit logs match the selected role filter.";
+    }
+
+    return "Important system actions will appear here.";
+  }
 
   if (loading) {
     return (
@@ -91,34 +161,54 @@ export default function AuditLogScreen({ onBack }) {
       />
 
       <View style={styles.summaryRow}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{summary.guestActions}</Text>
-          <Text style={styles.summaryLabel}>Guest</Text>
-        </View>
+        <SummaryFilterCard
+          label="Guest"
+          value={summary.guest}
+          role="guest"
+          selectedRole={selectedRole}
+          onPress={() => handleFilterPress("guest")}
+        />
 
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{summary.hostActions}</Text>
-          <Text style={styles.summaryLabel}>Host</Text>
-        </View>
+        <SummaryFilterCard
+          label="Host"
+          value={summary.host}
+          role="host"
+          selectedRole={selectedRole}
+          onPress={() => handleFilterPress("host")}
+        />
 
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{summary.moderatorActions}</Text>
-          <Text style={styles.summaryLabel}>Moderator</Text>
-        </View>
+        <SummaryFilterCard
+          label="Moderator"
+          value={summary.moderator}
+          role="moderator"
+          selectedRole={selectedRole}
+          onPress={() => handleFilterPress("moderator")}
+        />
+      </View>
+
+      <View style={styles.filterInfoBox}>
+        <Text style={styles.filterInfoText}>
+          {selectedRole
+            ? `Showing ${filteredLogs.length} ${selectedRole} log(s)`
+            : `Showing all ${filteredLogs.length} audit log(s)`}
+        </Text>
+
+        {selectedRole ? (
+          <Pressable onPress={() => setSelectedRole(null)}>
+            <Text style={styles.clearFilterText}>Clear filter</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <FlatList
-        data={logs}
+        data={filteredLogs}
         keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <EmptyState
-            title="No audit logs"
-            message="Important system actions will appear here."
-          />
+          <EmptyState title={getEmptyTitle()} message={getEmptyMessage()} />
         }
         renderItem={({ item }) => <AuditLogCard log={item} />}
       />
@@ -146,7 +236,7 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: "row",
     gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   summaryCard: {
     flex: 1,
@@ -157,16 +247,47 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: "center",
   },
+  selectedSummaryCard: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
   summaryValue: {
     fontSize: 24,
     fontWeight: "900",
     color: colors.textPrimary,
+  },
+  selectedSummaryValue: {
+    color: colors.primaryText,
   },
   summaryLabel: {
     marginTop: 3,
     fontSize: 12,
     fontWeight: "800",
     color: colors.textSecondary,
+  },
+  selectedSummaryLabel: {
+    color: colors.primaryText,
+  },
+  filterInfoBox: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  filterInfoText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: "800",
+  },
+  clearFilterText: {
+    fontSize: 13,
+    color: colors.info,
+    fontWeight: "900",
   },
   listContent: {
     paddingBottom: 40,

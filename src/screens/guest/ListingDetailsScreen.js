@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import InnerScreenHeader from "../../components/InnerScreenHeader";
 import { colors, radius, spacing } from "../../theme/theme";
+import { formatPrice } from "../../utils/currencyUtils";
 
 function DetailSection({ title, children }) {
   return (
@@ -49,7 +50,7 @@ export default function ListingDetailsScreen({
           </View>
 
           <View style={styles.priceBadge}>
-            <Text style={styles.price}>£{listing.nightlyRate}</Text>
+            <Text style={styles.price}>{formatPrice(listing.nightlyRate)}</Text>
             <Text style={styles.priceLabel}>per night</Text>
           </View>
         </View>
@@ -69,7 +70,9 @@ export default function ListingDetailsScreen({
 
           <View style={styles.quickInfoCard}>
             <Text style={styles.quickInfoIcon}>🧾</Text>
-            <Text style={styles.quickInfoValue}>£{listing.cleaningFee}</Text>
+            <Text style={styles.quickInfoValue}>
+              {formatPrice(listing.cleaningFee)}
+            </Text>
             <Text style={styles.quickInfoLabel}>Cleaning</Text>
           </View>
         </View>
@@ -115,7 +118,9 @@ export default function ListingDetailsScreen({
 
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.bottomPrice}>£{listing.nightlyRate}</Text>
+          <Text style={styles.bottomPrice}>
+            {formatPrice(listing.nightlyRate)}
+          </Text>
           <Text style={styles.bottomPriceLabel}>per night</Text>
         </View>
 

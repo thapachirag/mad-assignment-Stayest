@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../theme/theme";
+import { formatPrice } from "../utils/currencyUtils";
 
 export default function ListingCard({ listing, onPress }) {
   const amenitiesCount = listing.amenities?.length || 0;
@@ -24,7 +25,7 @@ export default function ListingCard({ listing, onPress }) {
           </View>
 
           <View style={styles.priceBox}>
-            <Text style={styles.price}>£{listing.nightlyRate}</Text>
+            <Text style={styles.price}>{formatPrice(listing.nightlyRate)}</Text>
             <Text style={styles.priceSuffix}>night</Text>
           </View>
         </View>
