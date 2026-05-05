@@ -1,103 +1,169 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, radius, spacing } from "../theme/theme";
 
 export default function ListingCard({ listing, onPress }) {
-  const CardWrapper = onPress ? Pressable : View;
+  const amenitiesCount = listing.amenities?.length || 0;
 
   return (
-    <CardWrapper style={styles.card} onPress={onPress}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>{listing.title}</Text>
-        <Text style={styles.price}>£{listing.nightlyRate}/night</Text>
+    <View style={styles.card}>
+      <View style={styles.imagePlaceholder}>
+        <Text style={styles.imageText}>StayNest</Text>
+        <Text style={styles.imageSubtext}>Property</Text>
       </View>
 
-      <Text style={styles.location}>{listing.location}</Text>
+      <View style={styles.content}>
+        <View style={styles.headerRow}>
+          <View style={styles.titleArea}>
+            <Text style={styles.title} numberOfLines={1}>
+              {listing.title}
+            </Text>
+            <Text style={styles.location} numberOfLines={1}>
+              {listing.location}
+            </Text>
+          </View>
 
-      <Text style={styles.description} numberOfLines={2}>
-        {listing.description}
-      </Text>
+          <View style={styles.priceBox}>
+            <Text style={styles.price}>£{listing.nightlyRate}</Text>
+            <Text style={styles.priceSuffix}>night</Text>
+          </View>
+        </View>
 
-      <View style={styles.metaRow}>
-        <Text style={styles.metaText}>Max guests: {listing.maxGuests}</Text>
-        <Text style={styles.metaText}>Cleaning: £{listing.cleaningFee}</Text>
-      </View>
-
-      <Text style={styles.availability}>
-        Available: {listing.availableFrom} to {listing.availableTo}
-      </Text>
-
-      {listing.amenities?.length > 0 ? (
-        <Text style={styles.amenities}>
-          Amenities: {listing.amenities.join(", ")}
+        <Text style={styles.description} numberOfLines={2}>
+          {listing.description}
         </Text>
-      ) : null}
 
-      {onPress ? <Text style={styles.viewDetails}>View details →</Text> : null}
-    </CardWrapper>
+        <View style={styles.metaRow}>
+          <View style={styles.metaPill}>
+            <Text style={styles.metaIcon}>👥</Text>
+            <Text style={styles.metaText}>{listing.maxGuests} guests</Text>
+          </View>
+
+          <View style={styles.metaPill}>
+            <Text style={styles.metaIcon}>✦</Text>
+            <Text style={styles.metaText}>{amenitiesCount} amenities</Text>
+          </View>
+        </View>
+
+        <Text style={styles.availability}>
+          Available: {listing.availableFrom} → {listing.availableTo}
+        </Text>
+
+        {onPress ? (
+          <Pressable style={styles.viewButton} onPress={onPress}>
+            <Text style={styles.viewButtonText}>View Details</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    marginBottom: spacing.lg,
+  },
+  imagePlaceholder: {
+    height: 140,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageText: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: colors.textPrimary,
+  },
+  imageSubtext: {
+    marginTop: 3,
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: "700",
+  },
+  content: {
+    padding: spacing.lg,
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    gap: spacing.md,
+  },
+  titleArea: {
+    flex: 1,
   },
   title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  price: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#047857",
+    fontSize: 19,
+    fontWeight: "900",
+    color: colors.textPrimary,
   },
   location: {
     marginTop: 4,
     fontSize: 14,
-    color: "#6b7280",
+    color: colors.textSecondary,
+    fontWeight: "600",
+  },
+  priceBox: {
+    alignItems: "flex-end",
+  },
+  price: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: colors.success,
+  },
+  priceSuffix: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: "700",
   },
   description: {
-    marginTop: 10,
+    marginTop: spacing.md,
     fontSize: 14,
-    color: "#374151",
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   metaRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  metaPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+  },
+  metaIcon: {
+    marginRight: 5,
   },
   metaText: {
-    fontSize: 13,
-    color: "#4b5563",
-    fontWeight: "600",
+    fontSize: 12,
+    color: colors.textPrimary,
+    fontWeight: "800",
   },
   availability: {
-    marginTop: 10,
+    marginTop: spacing.md,
     fontSize: 13,
-    color: "#1d4ed8",
-    fontWeight: "600",
-  },
-  amenities: {
-    marginTop: 8,
-    fontSize: 13,
-    color: "#6b7280",
-  },
-  viewDetails: {
-    marginTop: 12,
-    fontSize: 14,
+    color: colors.info,
     fontWeight: "800",
-    color: "#2563eb",
+  },
+  viewButton: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.primary,
+    padding: 13,
+    borderRadius: radius.md,
+  },
+  viewButtonText: {
+    color: colors.primaryText,
+    textAlign: "center",
+    fontWeight: "900",
+    fontSize: 15,
   },
 });
