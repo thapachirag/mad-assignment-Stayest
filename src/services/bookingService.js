@@ -24,16 +24,13 @@ export async function hasOverlappingApprovedBooking({
   const bookingsQuery = query(
     collection(db, "bookings"),
     where("listingId", "==", listingId),
+    where("status", "in", BLOCKING_STATUSES),
   );
 
   const snapshot = await getDocs(bookingsQuery);
 
   return snapshot.docs.some((bookingDoc) => {
     const booking = bookingDoc.data();
-
-    if (!BLOCKING_STATUSES.includes(booking.status)) {
-      return false;
-    }
 
     return doDateRangesOverlap(
       checkInDate,
@@ -52,18 +49,6 @@ export async function createBookingRequest({
   numberOfGuests,
   notes,
 }) {
-  const overlapExists = await hasOverlappingApprovedBooking({
-    listingId: listing.id,
-    checkInDate,
-    checkOutDate,
-  });
-
-  if (overlapExists) {
-    throw new Error(
-      "These dates are already unavailable because another booking has been approved.",
-    );
-  }
-
   const priceBreakdown = calculateBookingPrice({
     nightlyRate: listing.nightlyRate,
     cleaningFee: listing.cleaningFee,
@@ -72,19 +57,30 @@ export async function createBookingRequest({
   });
 
   const bookingRef = await addDoc(collection(db, "bookings"), {
+    // Important relationship fields
     listingId: listing.id,
     listingTitle: listing.title,
     hostId: listing.hostId,
-    guestId,
+    guestId: guestId,
+
+    // Booking details
     checkInDate,
     checkOutDate,
     numberOfGuests: Number(numberOfGuests),
     nights: priceBreakdown.nights,
+
+    // Price details
     nightlyRate: Number(listing.nightlyRate),
     cleaningFee: Number(listing.cleaningFee),
     totalPrice: priceBreakdown.totalPrice,
+
+    // Guest note
     notes: notes.trim(),
+
+    // Important status field
     status: "requested",
+
+    // Timestamps
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

@@ -15,11 +15,19 @@ import RaiseDisputeScreen from "./RaiseDisputeScreen";
 export default function HostHomeScreen() {
   const [screen, setScreen] = useState("dashboard");
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [selectedListing, setSelectedListing] = useState(null);
 
   if (screen === "listings") {
     return (
       <HostListingsScreen
-        onCreatePress={() => setScreen("createListing")}
+        onCreatePress={() => {
+          setSelectedListing(null);
+          setScreen("createListing");
+        }}
+        onEditPress={(listing) => {
+          setSelectedListing(listing);
+          setScreen("editListing");
+        }}
         onBack={() => setScreen("dashboard")}
       />
     );
@@ -29,6 +37,17 @@ export default function HostHomeScreen() {
     return (
       <CreateListingScreen
         onSaved={() => setScreen("listings")}
+        onCancel={() => setScreen("listings")}
+      />
+    );
+  }
+
+  if (screen === "editListing" && selectedListing) {
+    return (
+      <CreateListingScreen
+        initialListing={selectedListing}
+        onSaved={() => setScreen("listings")}
+        onDeleted={() => setScreen("listings")}
         onCancel={() => setScreen("listings")}
       />
     );

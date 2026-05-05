@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../theme/theme";
 
 export default function InnerScreenHeader({
@@ -31,6 +31,7 @@ export default function InnerScreenHeader({
 
 const styles = StyleSheet.create({
   wrapper: {
+    marginTop: Platform.OS === "ios" ? spacing.xl : spacing.lg,
     marginBottom: spacing.lg,
   },
   topRow: {

@@ -1,78 +1,207 @@
-import { useState } from "react";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import React, { useMemo, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
+import InnerScreenHeader from "../../components/InnerScreenHeader";
 import { auth } from "../../config/firebase";
-import { createListing } from "../../services/listingService";
+import {
+  createListing,
+  deleteListing,
+  updateListing,
+} from "../../services/listingService";
+import { colors, radius, spacing } from "../../theme/theme";
 
-export default function CreateListingScreen({ onSaved, onCancel }) {
-  const [title, setTitle] = useState("Modern Studio Apartment");
-  const [location, setLocation] = useState("Northampton");
-  const [description, setDescription] = useState(
-    "A clean and comfortable studio apartment suitable for short stays.",
+function FormSection({ title, subtitle, children }) {
+  return (
+    <View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+      {children}
+    </View>
   );
-  const [nightlyRate, setNightlyRate] = useState("75");
-  const [cleaningFee, setCleaningFee] = useState("20");
-  const [maxGuests, setMaxGuests] = useState("2");
-  const [amenitiesText, setAmenitiesText] = useState("WiFi, Kitchen, Parking");
-  const [houseRules, setHouseRules] = useState("No smoking. No parties.");
-  const [cancellationPolicy, setCancellationPolicy] = useState("Flexible");
-  const [availableFrom, setAvailableFrom] = useState("2026-05-10");
-  const [availableTo, setAvailableTo] = useState("2026-06-30");
+}
+
+function FieldLabel({ children }) {
+  return <Text style={styles.label}>{children}</Text>;
+}
+
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateString(dateString) {
+  if (!dateString) {
+    return new Date();
+  }
+
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function addDays(date, days) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+export default function CreateListingScreen({
+  onSaved,
+  onCancel,
+  onDeleted,
+  initialListing = null,
+}) {
+  const isEditing = Boolean(initialListing?.id);
+
+  const today = useMemo(() => {
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    return currentDate;
+  }, []);
+
+  const defaultFrom = formatDate(today);
+  const defaultTo = formatDate(addDays(today, 30));
+
+  const [title, setTitle] = useState(
+    initialListing?.title || "Modern Studio Apartment",
+  );
+
+  const [location, setLocation] = useState(
+    initialListing?.location || "Northampton",
+  );
+
+  const [description, setDescription] = useState(
+    initialListing?.description ||
+      "A clean and comfortable studio apartment suitable for short stays.",
+  );
+
+  const [nightlyRate, setNightlyRate] = useState(
+    initialListing?.nightlyRate ? String(initialListing.nightlyRate) : "75",
+  );
+
+  const [cleaningFee, setCleaningFee] = useState(
+    initialListing?.cleaningFee ? String(initialListing.cleaningFee) : "20",
+  );
+
+  const [maxGuests, setMaxGuests] = useState(
+    initialListing?.maxGuests ? String(initialListing.maxGuests) : "2",
+  );
+
+  const [amenitiesText, setAmenitiesText] = useState(
+    initialListing?.amenities?.length
+      ? initialListing.amenities.join(", ")
+      : "WiFi, Kitchen, Parking",
+  );
+
+  const [houseRules, setHouseRules] = useState(
+    initialListing?.houseRules || "No smoking. No parties.",
+  );
+
+  const [cancellationPolicy, setCancellationPolicy] = useState(
+    initialListing?.cancellationPolicy || "Flexible",
+  );
+
+  const [availableFrom, setAvailableFrom] = useState(
+    initialListing?.availableFrom || defaultFrom,
+  );
+
+  const [availableTo, setAvailableTo] = useState(
+    initialListing?.availableTo || defaultTo,
+  );
+
+  const [errors, setErrors] = useState({});
+  const [activeDatePicker, setActiveDatePicker] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  const availableFromDate = parseDateString(availableFrom);
+  const availableToDate = parseDateString(availableTo);
+
+  function clearError(fieldName) {
+    setErrors((currentErrors) => {
+      const updatedErrors = { ...currentErrors };
+      delete updatedErrors[fieldName];
+      return updatedErrors;
+    });
+  }
+
+  function handleDateChange(event, selectedDate) {
+    const pickerType = activeDatePicker;
+
+    if (Platform.OS === "android") {
+      setActiveDatePicker(null);
+    }
+
+    if (!selectedDate || !pickerType) {
+      return;
+    }
+
+    const formattedDate = formatDate(selectedDate);
+
+    if (pickerType === "availableFrom") {
+      setAvailableFrom(formattedDate);
+
+      const existingAvailableToDate = parseDateString(availableTo);
+
+      if (existingAvailableToDate <= selectedDate) {
+        setAvailableTo(formatDate(addDays(selectedDate, 1)));
+      }
+
+      clearError("dates");
+    }
+
+    if (pickerType === "availableTo") {
+      setAvailableTo(formattedDate);
+      clearError("dates");
+    }
+  }
+
   function validateForm() {
-    if (!title || !location || !description) {
-      Alert.alert(
-        "Missing details",
-        "Please enter title, location, and description.",
-      );
-      return false;
+    const nextErrors = {};
+
+    if (!title.trim()) {
+      nextErrors.title = "Property title is required.";
+    }
+
+    if (!location.trim()) {
+      nextErrors.location = "Location is required.";
+    }
+
+    if (!description.trim()) {
+      nextErrors.description = "Description is required.";
     }
 
     if (!nightlyRate || Number(nightlyRate) <= 0) {
-      Alert.alert("Invalid price", "Nightly rate must be greater than 0.");
-      return false;
+      nextErrors.nightlyRate = "Nightly rate must be greater than 0.";
     }
 
     if (!cleaningFee || Number(cleaningFee) < 0) {
-      Alert.alert("Invalid cleaning fee", "Cleaning fee cannot be negative.");
-      return false;
+      nextErrors.cleaningFee = "Cleaning fee cannot be negative.";
     }
 
     if (!maxGuests || Number(maxGuests) <= 0) {
-      Alert.alert(
-        "Invalid guest capacity",
-        "Maximum guests must be greater than 0.",
-      );
-      return false;
-    }
-
-    if (!availableFrom || !availableTo) {
-      Alert.alert(
-        "Missing availability",
-        "Please enter available from and available to dates.",
-      );
-      return false;
+      nextErrors.maxGuests = "Maximum guests must be greater than 0.";
     }
 
     if (availableFrom >= availableTo) {
-      Alert.alert(
-        "Invalid dates",
-        "Available To date must be after Available From date.",
-      );
-      return false;
+      nextErrors.dates = "Available To date must be after Available From date.";
     }
 
-    return true;
+    setErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
   }
 
   async function handleSave() {
@@ -92,33 +221,86 @@ export default function CreateListingScreen({ onSaved, onCancel }) {
       .map((item) => item.trim())
       .filter(Boolean);
 
+    const listingPayload = {
+      title: title.trim(),
+      location: location.trim(),
+      description: description.trim(),
+      nightlyRate: Number(nightlyRate),
+      cleaningFee: Number(cleaningFee),
+      maxGuests: Number(maxGuests),
+      amenities,
+      houseRules: houseRules.trim(),
+      cancellationPolicy: cancellationPolicy.trim(),
+      availableFrom,
+      availableTo,
+      isActive: true,
+    };
+
     try {
       setSaving(true);
 
-      await createListing({
-        hostId: currentUser.uid,
-        listingData: {
-          title,
-          location,
-          description,
-          nightlyRate,
-          cleaningFee,
-          maxGuests,
-          amenities,
-          houseRules,
-          cancellationPolicy,
-          availableFrom,
-          availableTo,
-        },
-      });
+      if (isEditing) {
+        await updateListing(initialListing.id, listingPayload);
 
-      Alert.alert("Listing created", "Your property listing has been saved.");
+        Alert.alert(
+          "Listing updated",
+          "Your property listing has been updated.",
+        );
+      } else {
+        await createListing({
+          hostId: currentUser.uid,
+          listingData: listingPayload,
+        });
+
+        Alert.alert("Listing created", "Your property listing has been saved.");
+      }
+
       onSaved();
     } catch (error) {
-      Alert.alert("Save failed", error.message);
+      Alert.alert(isEditing ? "Update failed" : "Save failed", error.message);
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleDeleteListing() {
+    if (!isEditing) {
+      return;
+    }
+
+    Alert.alert(
+      "Delete Listing",
+      `Are you sure you want to delete "${initialListing.title}"? This action cannot be undone.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setSaving(true);
+
+              await deleteListing(initialListing.id);
+
+              Alert.alert("Listing deleted", "The listing has been removed.");
+
+              if (onDeleted) {
+                onDeleted();
+              } else {
+                onSaved();
+              }
+            } catch (error) {
+              Alert.alert("Delete failed", error.message);
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -126,93 +308,240 @@ export default function CreateListingScreen({ onSaved, onCancel }) {
       style={styles.wrapper}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Create Listing</Text>
-        <Text style={styles.subtitle}>
-          Add the property information guests will see before requesting a
-          booking.
-        </Text>
-
-        <Text style={styles.label}>Title</Text>
-        <TextInput style={styles.input} value={title} onChangeText={setTitle} />
-
-        <Text style={styles.label}>Location</Text>
-        <TextInput
-          style={styles.input}
-          value={location}
-          onChangeText={setLocation}
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <InnerScreenHeader
+          title={isEditing ? "Edit Listing" : "Create Listing"}
+          subtitle={
+            isEditing
+              ? "Update property details, pricing, amenities, rules, and availability."
+              : "Add property details, pricing, amenities, rules, and availability."
+          }
+          onBack={onCancel}
         />
 
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
+        <FormSection
+          title="Basic Information"
+          subtitle="This information helps guests understand your property."
+        >
+          <FieldLabel>Property Title</FieldLabel>
+          <TextInput
+            style={[styles.input, errors.title && styles.fieldError]}
+            value={title}
+            onChangeText={(value) => {
+              setTitle(value);
+              clearError("title");
+            }}
+            placeholder="Modern Studio Apartment"
+          />
+          {errors.title ? (
+            <Text style={styles.errorText}>{errors.title}</Text>
+          ) : null}
 
-        <Text style={styles.label}>Nightly Rate (£)</Text>
-        <TextInput
-          style={styles.input}
-          value={nightlyRate}
-          onChangeText={setNightlyRate}
-          keyboardType="numeric"
-        />
+          <FieldLabel>Location</FieldLabel>
+          <TextInput
+            style={[styles.input, errors.location && styles.fieldError]}
+            value={location}
+            onChangeText={(value) => {
+              setLocation(value);
+              clearError("location");
+            }}
+            placeholder="Northampton"
+          />
+          {errors.location ? (
+            <Text style={styles.errorText}>{errors.location}</Text>
+          ) : null}
 
-        <Text style={styles.label}>Cleaning Fee (£)</Text>
-        <TextInput
-          style={styles.input}
-          value={cleaningFee}
-          onChangeText={setCleaningFee}
-          keyboardType="numeric"
-        />
+          <FieldLabel>Description</FieldLabel>
+          <TextInput
+            style={[
+              styles.input,
+              styles.multiline,
+              errors.description && styles.fieldError,
+            ]}
+            value={description}
+            onChangeText={(value) => {
+              setDescription(value);
+              clearError("description");
+            }}
+            multiline
+            placeholder="Describe the property..."
+          />
+          {errors.description ? (
+            <Text style={styles.errorText}>{errors.description}</Text>
+          ) : null}
+        </FormSection>
 
-        <Text style={styles.label}>Maximum Guests</Text>
-        <TextInput
-          style={styles.input}
-          value={maxGuests}
-          onChangeText={setMaxGuests}
-          keyboardType="numeric"
-        />
+        <FormSection
+          title="Pricing and Capacity"
+          subtitle="Set your nightly price, cleaning fee, and guest capacity."
+        >
+          <View style={styles.twoColumnRow}>
+            <View style={styles.column}>
+              <FieldLabel>Nightly Rate (£)</FieldLabel>
+              <TextInput
+                style={[styles.input, errors.nightlyRate && styles.fieldError]}
+                value={nightlyRate}
+                onChangeText={(value) => {
+                  setNightlyRate(value.replace(/[^0-9]/g, ""));
+                  clearError("nightlyRate");
+                }}
+                keyboardType="number-pad"
+              />
+              {errors.nightlyRate ? (
+                <Text style={styles.errorText}>{errors.nightlyRate}</Text>
+              ) : null}
+            </View>
 
-        <Text style={styles.label}>Amenities</Text>
-        <TextInput
-          style={styles.input}
-          value={amenitiesText}
-          onChangeText={setAmenitiesText}
-          placeholder="WiFi, Kitchen, Parking"
-        />
+            <View style={styles.column}>
+              <FieldLabel>Cleaning Fee (£)</FieldLabel>
+              <TextInput
+                style={[styles.input, errors.cleaningFee && styles.fieldError]}
+                value={cleaningFee}
+                onChangeText={(value) => {
+                  setCleaningFee(value.replace(/[^0-9]/g, ""));
+                  clearError("cleaningFee");
+                }}
+                keyboardType="number-pad"
+              />
+              {errors.cleaningFee ? (
+                <Text style={styles.errorText}>{errors.cleaningFee}</Text>
+              ) : null}
+            </View>
+          </View>
 
-        <Text style={styles.label}>House Rules</Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          value={houseRules}
-          onChangeText={setHouseRules}
-          multiline
-        />
+          <FieldLabel>Maximum Guests</FieldLabel>
+          <TextInput
+            style={[styles.input, errors.maxGuests && styles.fieldError]}
+            value={maxGuests}
+            onChangeText={(value) => {
+              setMaxGuests(value.replace(/[^0-9]/g, ""));
+              clearError("maxGuests");
+            }}
+            keyboardType="number-pad"
+          />
+          {errors.maxGuests ? (
+            <Text style={styles.errorText}>{errors.maxGuests}</Text>
+          ) : null}
+        </FormSection>
 
-        <Text style={styles.label}>Cancellation Policy</Text>
-        <TextInput
-          style={styles.input}
-          value={cancellationPolicy}
-          onChangeText={setCancellationPolicy}
-        />
+        <FormSection
+          title="Availability"
+          subtitle="Choose when this property can be booked."
+        >
+          <View style={styles.twoColumnRow}>
+            <View style={styles.column}>
+              <FieldLabel>Available From</FieldLabel>
+              <Pressable
+                style={[styles.dateButton, errors.dates && styles.fieldError]}
+                onPress={() => {
+                  clearError("dates");
+                  setActiveDatePicker("availableFrom");
+                }}
+              >
+                <Text style={styles.dateButtonText}>{availableFrom}</Text>
+                <Text>📅</Text>
+              </Pressable>
+            </View>
 
-        <Text style={styles.label}>Available From</Text>
-        <TextInput
-          style={styles.input}
-          value={availableFrom}
-          onChangeText={setAvailableFrom}
-          placeholder="YYYY-MM-DD"
-        />
+            <View style={styles.column}>
+              <FieldLabel>Available To</FieldLabel>
+              <Pressable
+                style={[styles.dateButton, errors.dates && styles.fieldError]}
+                onPress={() => {
+                  clearError("dates");
+                  setActiveDatePicker("availableTo");
+                }}
+              >
+                <Text style={styles.dateButtonText}>{availableTo}</Text>
+                <Text>📅</Text>
+              </Pressable>
+            </View>
+          </View>
 
-        <Text style={styles.label}>Available To</Text>
-        <TextInput
-          style={styles.input}
-          value={availableTo}
-          onChangeText={setAvailableTo}
-          placeholder="YYYY-MM-DD"
-        />
+          {errors.dates ? (
+            <Text style={styles.errorText}>{errors.dates}</Text>
+          ) : (
+            <Text style={styles.helperText}>
+              The end date must be after the start date.
+            </Text>
+          )}
+
+          {activeDatePicker ? (
+            <View style={styles.pickerBox}>
+              <DateTimePicker
+                value={
+                  activeDatePicker === "availableFrom"
+                    ? availableFromDate
+                    : availableToDate
+                }
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                themeVariant="light"
+                textColor={colors.textPrimary}
+                accentColor={colors.primary}
+                style={styles.datePicker}
+                minimumDate={
+                  activeDatePicker === "availableFrom"
+                    ? today
+                    : addDays(availableFromDate, 1)
+                }
+                onChange={handleDateChange}
+              />
+
+              {Platform.OS === "ios" ? (
+                <Pressable
+                  style={styles.doneButton}
+                  onPress={() => setActiveDatePicker(null)}
+                >
+                  <Text style={styles.doneButtonText}>Done</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+        </FormSection>
+
+        <FormSection
+          title="Amenities and Rules"
+          subtitle="Use comma-separated amenities so they display as chips in the guest view."
+        >
+          <FieldLabel>Amenities</FieldLabel>
+          <TextInput
+            style={styles.input}
+            value={amenitiesText}
+            onChangeText={setAmenitiesText}
+            placeholder="WiFi, Kitchen, Parking"
+          />
+
+          <FieldLabel>House Rules</FieldLabel>
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            value={houseRules}
+            onChangeText={setHouseRules}
+            multiline
+          />
+
+          <FieldLabel>Cancellation Policy</FieldLabel>
+          <TextInput
+            style={styles.input}
+            value={cancellationPolicy}
+            onChangeText={setCancellationPolicy}
+          />
+        </FormSection>
+
+        <View style={styles.noticeBox}>
+          <Text style={styles.noticeTitle}>
+            {isEditing ? "Listing update" : "Listing visibility"}
+          </Text>
+          <Text style={styles.noticeText}>
+            {isEditing
+              ? "Your changes will update this listing for guests immediately."
+              : "This listing will become active immediately and visible to guests in browse and featured listing sections."}
+          </Text>
+        </View>
 
         <Pressable
           style={[styles.primaryButton, saving && styles.disabledButton]}
@@ -220,9 +549,23 @@ export default function CreateListingScreen({ onSaved, onCancel }) {
           disabled={saving}
         >
           <Text style={styles.primaryButtonText}>
-            {saving ? "Saving..." : "Save Listing"}
+            {saving
+              ? "Saving..."
+              : isEditing
+                ? "Update Listing"
+                : "Save Listing"}
           </Text>
         </Pressable>
+
+        {isEditing ? (
+          <Pressable
+            style={[styles.deleteButton, saving && styles.disabledButton]}
+            onPress={handleDeleteListing}
+            disabled={saving}
+          >
+            <Text style={styles.deleteButtonText}>Delete Listing</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable style={styles.secondaryButton} onPress={onCancel}>
           <Text style={styles.secondaryButtonText}>Cancel</Text>
@@ -235,70 +578,174 @@ export default function CreateListingScreen({ onSaved, onCancel }) {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   container: {
-    padding: 24,
-    paddingTop: 64,
-    paddingBottom: 40,
+    padding: spacing.xl,
+    paddingBottom: 48,
   },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
+  sectionCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
   },
-  subtitle: {
-    marginTop: 6,
-    marginBottom: 22,
-    fontSize: 15,
-    color: "#6b7280",
-    lineHeight: 21,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.textPrimary,
+  },
+  sectionSubtitle: {
+    marginTop: 4,
+    marginBottom: spacing.md,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#111827",
+    fontSize: 13,
+    fontWeight: "900",
+    color: colors.textPrimary,
     marginBottom: 6,
-    marginTop: 10,
+    marginTop: spacing.sm,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 12,
-    padding: 14,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 13,
     fontSize: 15,
-    backgroundColor: "#ffffff",
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.sm,
   },
   multiline: {
-    minHeight: 90,
+    minHeight: 100,
     textAlignVertical: "top",
   },
+  twoColumnRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  column: {
+    flex: 1,
+  },
+  dateButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 13,
+    backgroundColor: colors.surface,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dateButtonText: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontWeight: "900",
+  },
+  pickerBox: {
+    marginTop: spacing.md,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.sm,
+    overflow: "hidden",
+  },
+  datePicker: {
+    backgroundColor: "#ffffff",
+  },
+  doneButton: {
+    backgroundColor: colors.primary,
+    padding: 12,
+    borderRadius: radius.md,
+    marginTop: spacing.sm,
+  },
+  doneButtonText: {
+    color: colors.primaryText,
+    textAlign: "center",
+    fontWeight: "900",
+  },
+  helperText: {
+    marginTop: spacing.sm,
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  fieldError: {
+    borderColor: colors.danger,
+    borderWidth: 2,
+    backgroundColor: "#fff5f5",
+  },
+  errorText: {
+    marginTop: 4,
+    marginBottom: spacing.sm,
+    fontSize: 12,
+    color: colors.danger,
+    fontWeight: "900",
+    lineHeight: 18,
+  },
+  noticeBox: {
+    backgroundColor: colors.infoLight,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  noticeTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: colors.info,
+    marginBottom: 5,
+  },
+  noticeText: {
+    fontSize: 13,
+    color: colors.info,
+    lineHeight: 19,
+    fontWeight: "600",
+  },
   primaryButton: {
-    marginTop: 24,
-    backgroundColor: "#111827",
+    backgroundColor: colors.primary,
     padding: 15,
-    borderRadius: 12,
+    borderRadius: radius.md,
+    marginTop: spacing.sm,
+  },
+  primaryButtonText: {
+    color: colors.primaryText,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 15,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+  },
+  secondaryButtonText: {
+    color: colors.textPrimary,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  deleteButton: {
+    backgroundColor: colors.dangerLight,
+    padding: 15,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+  },
+  deleteButtonText: {
+    color: colors.danger,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "900",
   },
   disabledButton: {
     opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  secondaryButton: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    padding: 15,
-    borderRadius: 12,
-  },
-  secondaryButtonText: {
-    color: "#111827",
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
   },
 });
