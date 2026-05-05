@@ -1,7 +1,12 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import { logoutUser } from "../../services/authService";
+import { colors, typography } from "../../theme/theme";
+
+import AppHeader from "../../components/AppHeader";
+import DashboardCard from "../../components/DashboardCard";
+import ScreenContainer from "../../components/ScreenContainer";
+
 import AuditLogScreen from "./AuditLogScreen";
 import DisputeDetailScreen from "./DisputeDetailScreen";
 import DisputeListScreen from "./DisputeListScreen";
@@ -37,82 +42,75 @@ export default function ModeratorHomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.badge}>Moderator</Text>
-      <Text style={styles.title}>Moderator Dashboard</Text>
-      <Text style={styles.description}>
-        Review disputes, close or escalate cases, and inspect audit logs.
-      </Text>
+    <ScreenContainer scroll>
+      <AppHeader />
 
-      <Pressable style={styles.button} onPress={() => setScreen("disputes")}>
-        <Text style={styles.buttonText}>Review Disputes</Text>
-      </Pressable>
+      <View style={styles.header}>
+        <Text style={styles.title}>Review platform activity</Text>
+        <Text style={styles.subtitle}>
+          Handle disputed bookings, record decisions, escalate serious cases,
+          and inspect the system audit trail.
+        </Text>
+      </View>
 
-      <Pressable
-        style={styles.secondaryButton}
+      <DashboardCard
+        title="Review Disputes"
+        description="Open dispute cases, review evidence notes, and decide whether to close or escalate the case."
+        meta="Moderator case handling"
+        accent="danger"
+        onPress={() => setScreen("disputes")}
+      />
+
+      <DashboardCard
+        title="Audit Logs"
+        description="View important system actions such as requests, approvals, reviews, and dispute decisions."
+        meta="Governance and traceability"
+        accent="info"
         onPress={() => setScreen("auditLogs")}
-      >
-        <Text style={styles.secondaryButtonText}>Audit Logs</Text>
-      </Pressable>
-
-      <Pressable style={styles.secondaryButton} onPress={logoutUser}>
-        <Text style={styles.secondaryButtonText}>Logout</Text>
-      </Pressable>
-    </View>
+      />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: "#ffffff",
+  header: {
+    marginBottom: 18,
   },
-  badge: {
+  roleBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#fee2e2",
-    color: "#991b1b",
+    backgroundColor: colors.dangerLight,
+    color: colors.danger,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
-    fontWeight: "700",
-    marginBottom: 12,
+    fontWeight: "900",
+    marginBottom: 14,
+    overflow: "hidden",
   },
   title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 10,
+    ...typography.screenTitle,
   },
-  description: {
-    fontSize: 16,
-    color: "#6b7280",
-    lineHeight: 22,
+  subtitle: {
+    ...typography.body,
+    marginTop: 8,
   },
-  button: {
-    backgroundColor: "#111827",
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 28,
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    textAlign: "center",
-    fontSize: 16,
-  },
-  secondaryButton: {
+  summaryCard: {
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 12,
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 12,
   },
-  secondaryButtonText: {
-    color: "#111827",
-    fontWeight: "700",
-    textAlign: "center",
+  summaryTitle: {
     fontSize: 16,
+    fontWeight: "900",
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
 });

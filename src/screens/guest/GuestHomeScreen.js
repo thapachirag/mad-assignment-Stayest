@@ -1,7 +1,13 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import { logoutUser } from "../../services/authService";
+import { colors, typography } from "../../theme/theme";
+
+import AppHeader from "../../components/AppHeader";
+import DashboardCard from "../../components/DashboardCard";
+import FeaturedListingsSection from "../../components/FeaturedListingsSection";
+import ScreenContainer from "../../components/ScreenContainer";
+
 import BookingRequestScreen from "./BookingRequestScreen";
 import GuestBookingsScreen from "./GuestBookingsScreen";
 import GuestBrowseScreen from "./GuestBrowseScreen";
@@ -68,82 +74,88 @@ export default function GuestHomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.badge}>Guest</Text>
-      <Text style={styles.title}>Guest Dashboard</Text>
-      <Text style={styles.description}>
-        Browse available properties, view details, and submit booking requests.
-      </Text>
+    <ScreenContainer scroll>
+      <AppHeader />
 
-      <Pressable style={styles.button} onPress={() => setScreen("browse")}>
-        <Text style={styles.buttonText}>Browse Listings</Text>
-      </Pressable>
+      <FeaturedListingsSection
+        onBrowseAll={() => setScreen("browse")}
+        onViewListing={(listing) => {
+          setSelectedListing(listing);
+          setScreen("details");
+        }}
+      />
 
-      <Pressable
-        style={styles.secondaryButton}
-        onPress={() => setScreen("bookings")}
-      >
-        <Text style={styles.secondaryButtonText}>My Bookings</Text>
-      </Pressable>
+      <View style={styles.quickActions}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
 
-      <Pressable style={styles.secondaryButton} onPress={logoutUser}>
-        <Text style={styles.secondaryButtonText}>Logout</Text>
-      </Pressable>
-    </View>
+        <DashboardCard
+          title="Browse All Listings"
+          description="Search all available properties and filter by price or guest capacity."
+          meta="Full listing search"
+          accent="info"
+          onPress={() => setScreen("browse")}
+        />
+
+        <DashboardCard
+          title="My Bookings"
+          description="Track booking requests, approval status, countdown indicators, and completed stays."
+          meta="View requested, approved, completed, or disputed bookings"
+          accent="success"
+          onPress={() => setScreen("bookings")}
+        />
+      </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: "#ffffff",
+  header: {
+    marginBottom: 18,
   },
-  badge: {
+  roleBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#dbeafe",
-    color: "#1d4ed8",
+    backgroundColor: colors.infoLight,
+    color: colors.info,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
-    fontWeight: "700",
-    marginBottom: 12,
+    fontWeight: "900",
+    marginBottom: 14,
+    overflow: "hidden",
   },
   title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 10,
+    ...typography.screenTitle,
   },
-  description: {
+  subtitle: {
+    ...typography.body,
+    marginTop: 8,
+  },
+  summaryCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 12,
+  },
+  summaryTitle: {
     fontSize: 16,
-    color: "#6b7280",
-    lineHeight: 22,
+    fontWeight: "900",
+    color: colors.textPrimary,
+    marginBottom: 6,
   },
-  button: {
-    backgroundColor: "#111827",
-    padding: 15,
-    borderRadius: 12,
+  summaryText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  quickActions: {
     marginTop: 28,
   },
-  buttonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    textAlign: "center",
-    fontSize: 16,
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 12,
-  },
-  secondaryButtonText: {
-    color: "#111827",
-    fontWeight: "700",
-    textAlign: "center",
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.textPrimary,
+    marginBottom: 4,
   },
 });

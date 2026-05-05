@@ -1,7 +1,12 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import { logoutUser } from "../../services/authService";
+import { colors, typography } from "../../theme/theme";
+
+import AppHeader from "../../components/AppHeader";
+import DashboardCard from "../../components/DashboardCard";
+import ScreenContainer from "../../components/ScreenContainer";
+
 import CreateListingScreen from "./CreateListingScreen";
 import HostBookingRequestsScreen from "./HostBookingRequestsScreen";
 import HostListingsScreen from "./HostListingsScreen";
@@ -52,82 +57,75 @@ export default function HostHomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.badge}>Host</Text>
-      <Text style={styles.title}>Host Dashboard</Text>
-      <Text style={styles.description}>
-        Create and manage property listings, then review guest booking requests.
-      </Text>
+    <ScreenContainer scroll>
+      <AppHeader />
 
-      <Pressable style={styles.button} onPress={() => setScreen("listings")}>
-        <Text style={styles.buttonText}>Manage Listings</Text>
-      </Pressable>
+      <View style={styles.header}>
+        <Text style={styles.title}>Manage your properties</Text>
+        <Text style={styles.subtitle}>
+          Create property listings, manage booking requests, complete stays, and
+          raise disputes when needed.
+        </Text>
+      </View>
 
-      <Pressable
-        style={styles.secondaryButton}
+      <DashboardCard
+        title="Manage Listings"
+        description="Create and review property listings with price, amenities, rules, and availability dates."
+        meta="Property owner tools"
+        accent="success"
+        onPress={() => setScreen("listings")}
+      />
+
+      <DashboardCard
+        title="Booking Requests"
+        description="Approve or decline guest requests, mark stays as completed, and raise disputes."
+        meta="Host booking inbox"
+        accent="warning"
         onPress={() => setScreen("bookingRequests")}
-      >
-        <Text style={styles.secondaryButtonText}>Booking Requests</Text>
-      </Pressable>
-
-      <Pressable style={styles.secondaryButton} onPress={logoutUser}>
-        <Text style={styles.secondaryButtonText}>Logout</Text>
-      </Pressable>
-    </View>
+      />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: "#ffffff",
+  header: {
+    marginBottom: 18,
   },
-  badge: {
+  roleBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#dcfce7",
-    color: "#166534",
+    backgroundColor: colors.successLight,
+    color: colors.success,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
-    fontWeight: "700",
-    marginBottom: 12,
+    fontWeight: "900",
+    marginBottom: 14,
+    overflow: "hidden",
   },
   title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 10,
+    ...typography.screenTitle,
   },
-  description: {
-    fontSize: 16,
-    color: "#6b7280",
-    lineHeight: 22,
+  subtitle: {
+    ...typography.body,
+    marginTop: 8,
   },
-  button: {
-    backgroundColor: "#111827",
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 28,
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    textAlign: "center",
-    fontSize: 16,
-  },
-  secondaryButton: {
+  summaryCard: {
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 12,
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 12,
   },
-  secondaryButtonText: {
-    color: "#111827",
-    fontWeight: "700",
-    textAlign: "center",
+  summaryTitle: {
     fontSize: 16,
+    fontWeight: "900",
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
 });
