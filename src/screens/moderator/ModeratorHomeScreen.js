@@ -120,14 +120,6 @@ export default function ModeratorHomeScreen() {
         ]}
       />
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Governance Flow</Text>
-        <Text style={styles.summaryText}>
-          Dispute raised → Moderator review → Close or escalate → Audit log
-          updated
-        </Text>
-      </View>
-
       <DashboardCard
         title="Review Disputes"
         description="Open dispute cases, review evidence notes, and decide whether to close or escalate the case."
