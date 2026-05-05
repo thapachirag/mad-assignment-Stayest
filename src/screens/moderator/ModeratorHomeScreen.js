@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { colors, typography } from "../../theme/theme";
-
 import AppHeader from "../../components/AppHeader";
 import DashboardCard from "../../components/DashboardCard";
 import ScreenContainer from "../../components/ScreenContainer";
+import { colors, typography } from "../../theme/theme";
 
 import AuditLogScreen from "./AuditLogScreen";
 import DisputeDetailScreen from "./DisputeDetailScreen";
@@ -32,7 +31,10 @@ export default function ModeratorHomeScreen() {
       <DisputeDetailScreen
         dispute={selectedDispute}
         onBack={() => setScreen("disputes")}
-        onResolved={() => setScreen("disputes")}
+        onResolved={() => {
+          setSelectedDispute(null);
+          setScreen("disputes");
+        }}
       />
     );
   }
@@ -75,17 +77,6 @@ export default function ModeratorHomeScreen() {
 const styles = StyleSheet.create({
   header: {
     marginBottom: 18,
-  },
-  roleBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.dangerLight,
-    color: colors.danger,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    fontWeight: "900",
-    marginBottom: 14,
-    overflow: "hidden",
   },
   title: {
     ...typography.screenTitle,

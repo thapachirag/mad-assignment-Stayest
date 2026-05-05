@@ -1,16 +1,36 @@
 import { collection, getDocs, query } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Pressable,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
+import EmptyState from "../../components/EmptyState";
+import InnerScreenHeader from "../../components/InnerScreenHeader";
 import { db } from "../../config/firebase";
+import { colors, radius, spacing } from "../../theme/theme";
+
+function AuditLogCard({ log }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.actionBadge}>
+        <Text style={styles.actionText}>{log.action}</Text>
+      </View>
+
+      <Text style={styles.description}>{log.description}</Text>
+
+      <View style={styles.metaBox}>
+        <Text style={styles.metaText}>Role: {log.role}</Text>
+        <Text style={styles.metaText}>Entity: {log.entityType}</Text>
+        <Text style={styles.metaText}>Entity ID: {log.entityId}</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function AuditLogScreen({ onBack }) {
   const [logs, setLogs] = useState([]);
@@ -18,16 +38,19 @@ export default function AuditLogScreen({ onBack }) {
   const [refreshing, setRefreshing] = useState(false);
 
   async function loadLogs() {
-    const logsQuery = query(collection(db, "auditLogs"));
-    const snapshot = await getDocs(logsQuery);
+    try {
+      const logsQuery = query(collection(db, "auditLogs"));
+      const snapshot = await getDocs(logsQuery);
 
-    const results = snapshot.docs.map((logDoc) => ({
-      id: logDoc.id,
-      ...logDoc.data(),
-    }));
+      const results = snapshot.docs.map((logDoc) => ({
+        id: logDoc.id,
+        ...logDoc.data(),
+      }));
 
-    setLogs(results);
-    setLoading(false);
+      setLogs(results);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -40,6 +63,16 @@ export default function AuditLogScreen({ onBack }) {
     setRefreshing(false);
   }
 
+  const summary = useMemo(() => {
+    const guestActions = logs.filter((item) => item.role === "guest").length;
+    const hostActions = logs.filter((item) => item.role === "host").length;
+    const moderatorActions = logs.filter(
+      (item) => item.role === "moderator",
+    ).length;
+
+    return { guestActions, hostActions, moderatorActions };
+  }, [logs]);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -51,10 +84,28 @@ export default function AuditLogScreen({ onBack }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Audit Logs</Text>
-      <Text style={styles.subtitle}>
-        Track important system actions by user, role, and action type.
-      </Text>
+      <InnerScreenHeader
+        title="Audit Logs"
+        subtitle="Track important actions across bookings, reviews, listings, and disputes."
+        onBack={onBack}
+      />
+
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryValue}>{summary.guestActions}</Text>
+          <Text style={styles.summaryLabel}>Guest</Text>
+        </View>
+
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryValue}>{summary.hostActions}</Text>
+          <Text style={styles.summaryLabel}>Host</Text>
+        </View>
+
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryValue}>{summary.moderatorActions}</Text>
+          <Text style={styles.summaryLabel}>Moderator</Text>
+        </View>
+      </View>
 
       <FlatList
         data={logs}
@@ -64,30 +115,13 @@ export default function AuditLogScreen({ onBack }) {
         }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>No audit logs</Text>
-            <Text style={styles.emptyText}>
-              Important system actions will appear here.
-            </Text>
-          </View>
+          <EmptyState
+            title="No audit logs"
+            message="Important system actions will appear here."
+          />
         }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.action}>{item.action}</Text>
-            <Text style={styles.description}>{item.description}</Text>
-
-            <View style={styles.metaBox}>
-              <Text style={styles.metaText}>Role: {item.role}</Text>
-              <Text style={styles.metaText}>Entity: {item.entityType}</Text>
-              <Text style={styles.metaText}>User ID: {item.userId}</Text>
-            </View>
-          </View>
-        )}
+        renderItem={({ item }) => <AuditLogCard log={item} />}
       />
-
-      <Pressable style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backButtonText}>Back to Dashboard</Text>
-      </Pressable>
     </View>
   );
 }
@@ -95,95 +129,85 @@ export default function AuditLogScreen({ onBack }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    paddingTop: 64,
-    backgroundColor: "#f9fafb",
+    padding: spacing.xl,
+    backgroundColor: colors.background,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
-    color: "#6b7280",
+    color: colors.textSecondary,
+    fontWeight: "700",
   },
-  title: {
-    fontSize: 30,
+  summaryRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    alignItems: "center",
+  },
+  summaryValue: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: colors.textPrimary,
+  },
+  summaryLabel: {
+    marginTop: 3,
+    fontSize: 12,
     fontWeight: "800",
-    color: "#111827",
-  },
-  subtitle: {
-    marginTop: 6,
-    marginBottom: 16,
-    fontSize: 15,
-    color: "#6b7280",
-    lineHeight: 21,
+    color: colors.textSecondary,
   },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 40,
   },
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
-  action: {
-    fontSize: 16,
+  actionBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.infoLight,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  actionText: {
+    color: colors.info,
+    fontSize: 12,
     fontWeight: "900",
-    color: "#111827",
   },
   description: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#374151",
-    lineHeight: 20,
+    marginTop: spacing.md,
+    fontSize: 15,
+    color: colors.textPrimary,
+    lineHeight: 22,
+    fontWeight: "700",
   },
   metaBox: {
-    marginTop: 12,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 12,
-    padding: 10,
+    marginTop: spacing.md,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    padding: spacing.md,
   },
   metaText: {
     fontSize: 13,
-    color: "#4b5563",
-    fontWeight: "600",
-    marginBottom: 3,
-  },
-  emptyBox: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    padding: 20,
-    marginTop: 20,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 6,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: "#6b7280",
-    lineHeight: 20,
-  },
-  backButton: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-  },
-  backButtonText: {
-    color: "#111827",
-    textAlign: "center",
+    color: colors.textSecondary,
     fontWeight: "700",
+    marginBottom: 4,
   },
 });
