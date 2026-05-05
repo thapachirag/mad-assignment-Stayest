@@ -22,6 +22,7 @@ import GuestBookingsScreen from "./GuestBookingsScreen";
 import GuestBrowseScreen from "./GuestBrowseScreen";
 import ListingDetailsScreen from "./ListingDetailsScreen";
 import ReviewScreen from "./ReviewScreen";
+import SavedListingsScreen from "./SavedListingsScreen";
 
 export default function GuestHomeScreen() {
   const [screen, setScreen] = useState("dashboard");
@@ -147,6 +148,18 @@ export default function GuestHomeScreen() {
     );
   }
 
+  if (screen === "savedListings") {
+    return (
+      <SavedListingsScreen
+        onBack={() => setScreen("dashboard")}
+        onSelectListing={(listing) => {
+          setSelectedListing(listing);
+          setScreen("listingDetails");
+        }}
+      />
+    );
+  }
+
   return (
     <ScreenContainer scroll>
       <AppHeader />
@@ -243,6 +256,14 @@ export default function GuestHomeScreen() {
         meta="Booking status timeline"
         accent="success"
         onPress={() => setScreen("bookings")}
+      />
+
+      <DashboardCard
+        title="Saved Listings"
+        description="View properties you bookmarked for later comparison or booking."
+        meta="Bookmarked properties"
+        accent="info"
+        onPress={() => setScreen("savedListings")}
       />
     </ScreenContainer>
   );

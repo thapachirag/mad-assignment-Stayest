@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import InnerScreenHeader from "../../components/InnerScreenHeader";
+import SaveListingButton from "../../components/SaveListingButton";
 import { colors, radius, spacing } from "../../theme/theme";
 import { formatPrice } from "../../utils/currencyUtils";
 
@@ -38,9 +39,15 @@ export default function ListingDetailsScreen({
           onBack={onBack}
         />
 
-        <View style={styles.heroImage}>
-          <Text style={styles.heroTitle}>StayNest</Text>
-          <Text style={styles.heroSubtitle}>Property Preview</Text>
+        <View style={styles.heroWrapper}>
+          <View style={styles.heroImage}>
+            <Text style={styles.heroTitle}>StayNest</Text>
+            <Text style={styles.heroSubtitle}>Property Preview</Text>
+          </View>
+
+          <View style={styles.bookmarkOverlay}>
+            <SaveListingButton listing={listing} />
+          </View>
         </View>
 
         <View style={styles.titleBlock}>
@@ -48,7 +55,6 @@ export default function ListingDetailsScreen({
             <Text style={styles.propertyTitle}>{listing.title}</Text>
             <Text style={styles.location}>{listing.location}</Text>
           </View>
-
           <View style={styles.priceBadge}>
             <Text style={styles.price}>{formatPrice(listing.nightlyRate)}</Text>
             <Text style={styles.priceLabel}>per night</Text>
@@ -147,7 +153,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.xl,
   },
   heroTitle: {
     fontSize: 30,
@@ -308,5 +313,23 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
     fontSize: 15,
     fontWeight: "900",
+  },
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  heroWrapper: {
+    position: "relative",
+    marginBottom: spacing.lg,
+  },
+
+  bookmarkOverlay: {
+    position: "absolute",
+    top: spacing.md,
+    right: spacing.md,
+    zIndex: 10,
   },
 });
