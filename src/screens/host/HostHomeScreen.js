@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-
-import { colors, typography } from "../../theme/theme";
 
 import AppHeader from "../../components/AppHeader";
 import DashboardCard from "../../components/DashboardCard";
+import DashboardSummaryRow from "../../components/DashboardSummaryRow";
 import ScreenContainer from "../../components/ScreenContainer";
+import { auth } from "../../config/firebase";
+import { getHostDashboardSummary } from "../../services/dashboardService";
+import { colors, typography } from "../../theme/theme";
 
 import CreateListingScreen from "./CreateListingScreen";
 import HostBookingRequestsScreen from "./HostBookingRequestsScreen";
@@ -16,6 +18,41 @@ export default function HostHomeScreen() {
   const [screen, setScreen] = useState("dashboard");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
+
+  const [summary, setSummary] = useState({
+    activeListings: 0,
+    requestedBookings: 0,
+    completedBookings: 0,
+  });
+
+  const [summaryLoading, setSummaryLoading] = useState(true);
+
+  async function loadDashboardSummary() {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      setSummaryLoading(false);
+      return;
+    }
+
+    try {
+      const result = await getHostDashboardSummary(currentUser.uid);
+      setSummary(result);
+    } catch (error) {
+      console.log("Failed to load host dashboard summary:", error);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadDashboardSummary();
+  }, []);
+
+  function refreshDashboard() {
+    setSummaryLoading(true);
+    loadDashboardSummary();
+  }
 
   if (screen === "listings") {
     return (
@@ -28,7 +65,10 @@ export default function HostHomeScreen() {
           setSelectedListing(listing);
           setScreen("editListing");
         }}
-        onBack={() => setScreen("dashboard")}
+        onBack={() => {
+          refreshDashboard();
+          setScreen("dashboard");
+        }}
       />
     );
   }
@@ -36,7 +76,10 @@ export default function HostHomeScreen() {
   if (screen === "createListing") {
     return (
       <CreateListingScreen
-        onSaved={() => setScreen("listings")}
+        onSaved={() => {
+          refreshDashboard();
+          setScreen("listings");
+        }}
         onCancel={() => setScreen("listings")}
       />
     );
@@ -46,9 +89,20 @@ export default function HostHomeScreen() {
     return (
       <CreateListingScreen
         initialListing={selectedListing}
-        onSaved={() => setScreen("listings")}
-        onDeleted={() => setScreen("listings")}
-        onCancel={() => setScreen("listings")}
+        onSaved={() => {
+          refreshDashboard();
+          setSelectedListing(null);
+          setScreen("listings");
+        }}
+        onDeleted={() => {
+          refreshDashboard();
+          setSelectedListing(null);
+          setScreen("listings");
+        }}
+        onCancel={() => {
+          setSelectedListing(null);
+          setScreen("listings");
+        }}
       />
     );
   }
@@ -56,7 +110,10 @@ export default function HostHomeScreen() {
   if (screen === "bookingRequests") {
     return (
       <HostBookingRequestsScreen
-        onBack={() => setScreen("dashboard")}
+        onBack={() => {
+          refreshDashboard();
+          setScreen("dashboard");
+        }}
         onRaiseDispute={(booking) => {
           setSelectedBooking(booking);
           setScreen("raiseDispute");
@@ -70,7 +127,11 @@ export default function HostHomeScreen() {
       <RaiseDisputeScreen
         booking={selectedBooking}
         onBack={() => setScreen("bookingRequests")}
-        onSubmitted={() => setScreen("bookingRequests")}
+        onSubmitted={() => {
+          refreshDashboard();
+          setSelectedBooking(null);
+          setScreen("bookingRequests");
+        }}
       />
     );
   }
@@ -84,6 +145,38 @@ export default function HostHomeScreen() {
         <Text style={styles.subtitle}>
           Create property listings, manage booking requests, complete stays, and
           raise disputes when needed.
+        </Text>
+      </View>
+
+      <DashboardSummaryRow
+        loading={summaryLoading}
+        items={[
+          {
+            label: "Listings",
+            value: summary.activeListings,
+            helper: "Active properties",
+            accent: "info",
+          },
+          {
+            label: "Requests",
+            value: summary.requestedBookings,
+            helper: "Need review",
+            accent: "warning",
+          },
+          {
+            label: "Completed",
+            value: summary.completedBookings,
+            helper: "Finished stays",
+            accent: "success",
+          },
+        ]}
+      />
+
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Host Workflow</Text>
+        <Text style={styles.summaryText}>
+          Create listing → Receive request → Approve or decline → Complete stay
+          → Raise dispute if needed
         </Text>
       </View>
 
@@ -109,17 +202,6 @@ export default function HostHomeScreen() {
 const styles = StyleSheet.create({
   header: {
     marginBottom: 18,
-  },
-  roleBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.successLight,
-    color: colors.success,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    fontWeight: "900",
-    marginBottom: 14,
-    overflow: "hidden",
   },
   title: {
     ...typography.screenTitle,

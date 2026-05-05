@@ -18,8 +18,45 @@ import { getAllActiveListings } from "../../services/listingService";
 import { colors, radius, spacing } from "../../theme/theme";
 import { formatPrice, PRICE_STEP } from "../../utils/currencyUtils";
 
+const SORT_OPTIONS = [
+  {
+    label: "Recommended",
+    value: "recommended",
+  },
+  {
+    label: "Price: Low to High",
+    value: "priceLowHigh",
+  },
+  {
+    label: "Price: High to Low",
+    value: "priceHighLow",
+  },
+  {
+    label: "Guest Capacity",
+    value: "guestCapacity",
+  },
+  {
+    label: "Recently Added",
+    value: "recentlyAdded",
+  },
+];
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function getCreatedAtMillis(listing) {
+  if (!listing.createdAt) return 0;
+
+  if (typeof listing.createdAt.toMillis === "function") {
+    return listing.createdAt.toMillis();
+  }
+
+  if (listing.createdAt.seconds) {
+    return listing.createdAt.seconds * 1000;
+  }
+
+  return 0;
 }
 
 function PriceRangeSliders({
@@ -103,10 +140,11 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
 
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [guestCapacity, setGuestCapacity] = useState("");
+  const [selectedSort, setSelectedSort] = useState("recommended");
   const [priceRangeTouched, setPriceRangeTouched] = useState(false);
   const [selectedPriceRange, setSelectedPriceRange] = useState({
     min: 0,
-    max: 100,
+    max: 10000,
   });
 
   async function loadListings() {
@@ -179,6 +217,7 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
 
   function handleClearFilters() {
     setGuestCapacity("");
+    setSelectedSort("recommended");
     setSelectedPriceRange(priceBounds);
     setPriceRangeTouched(false);
     setFiltersExpanded(false);
@@ -186,11 +225,12 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
 
   const hasActiveFilters =
     Boolean(guestCapacity) ||
+    selectedSort !== "recommended" ||
     effectivePriceRange.min > priceBounds.min ||
     effectivePriceRange.max < priceBounds.max;
 
-  const filteredListings = useMemo(() => {
-    return listings.filter((listing) => {
+  const filteredAndSortedListings = useMemo(() => {
+    const filtered = listings.filter((listing) => {
       const nightlyRate = Number(listing.nightlyRate);
       const maxGuests = Number(listing.maxGuests);
 
@@ -202,7 +242,41 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
 
       return priceMatch && guestMatch;
     });
-  }, [listings, effectivePriceRange, guestCapacity]);
+
+    const sorted = [...filtered];
+
+    if (selectedSort === "priceLowHigh") {
+      sorted.sort(
+        (a, b) => Number(a.nightlyRate || 0) - Number(b.nightlyRate || 0),
+      );
+    }
+
+    if (selectedSort === "priceHighLow") {
+      sorted.sort(
+        (a, b) => Number(b.nightlyRate || 0) - Number(a.nightlyRate || 0),
+      );
+    }
+
+    if (selectedSort === "guestCapacity") {
+      sorted.sort(
+        (a, b) => Number(b.maxGuests || 0) - Number(a.maxGuests || 0),
+      );
+    }
+
+    if (selectedSort === "recentlyAdded") {
+      sorted.sort((a, b) => getCreatedAtMillis(b) - getCreatedAtMillis(a));
+    }
+
+    return sorted;
+  }, [listings, effectivePriceRange, guestCapacity, selectedSort]);
+
+  function getSortLabel() {
+    const selectedOption = SORT_OPTIONS.find(
+      (option) => option.value === selectedSort,
+    );
+
+    return selectedOption?.label || "Recommended";
+  }
 
   function getFilterSummary() {
     const parts = [];
@@ -220,6 +294,10 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
 
     if (guestCapacity) {
       parts.push(`${guestCapacity}+ guests`);
+    }
+
+    if (selectedSort !== "recommended") {
+      parts.push(`Sort: ${getSortLabel()}`);
     }
 
     if (parts.length === 0) {
@@ -244,7 +322,7 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
     <View style={styles.container}>
       <InnerScreenHeader
         title="Browse Listings"
-        subtitle="Search available properties and filter by price or guest capacity."
+        subtitle="Search available properties and filter by price, guest capacity, or sorting preference."
         onBack={onBack}
       />
 
@@ -257,7 +335,7 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
         >
           <View style={styles.filterHeaderLeft}>
             <View style={styles.filterTitleRow}>
-              <Text style={styles.filterTitle}>Filters</Text>
+              <Text style={styles.filterTitle}>Filters & Sort</Text>
 
               {hasActiveFilters ? (
                 <View style={styles.activeBadge}>
@@ -314,6 +392,36 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
               />
             </View>
 
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Sort by</Text>
+
+              <View style={styles.sortOptionsWrap}>
+                {SORT_OPTIONS.map((option) => {
+                  const isSelected = selectedSort === option.value;
+
+                  return (
+                    <Pressable
+                      key={option.value}
+                      style={[
+                        styles.sortChip,
+                        isSelected && styles.selectedSortChip,
+                      ]}
+                      onPress={() => setSelectedSort(option.value)}
+                    >
+                      <Text
+                        style={[
+                          styles.sortChipText,
+                          isSelected && styles.selectedSortChipText,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
             {hasActiveFilters ? (
               <Pressable
                 style={styles.clearButton}
@@ -329,8 +437,8 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
       <View style={styles.resultInfoBox}>
         <Text style={styles.resultInfoText}>
           {hasActiveFilters
-            ? `Showing ${filteredListings.length} filtered listing(s)`
-            : `Showing all ${filteredListings.length} listing(s)`}
+            ? `Showing ${filteredAndSortedListings.length} filtered listing(s)`
+            : `Showing all ${filteredAndSortedListings.length} listing(s)`}
         </Text>
 
         {hasActiveFilters ? (
@@ -341,7 +449,7 @@ export default function GuestBrowseScreen({ onBack, onSelectListing }) {
       </View>
 
       <FlatList
-        data={filteredListings}
+        data={filteredAndSortedListings}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         refreshControl={
@@ -517,6 +625,31 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: "700",
     lineHeight: 18,
+  },
+  sortOptionsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  sortChip: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  selectedSortChip: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  sortChipText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  selectedSortChipText: {
+    color: colors.primaryText,
   },
   clearButton: {
     backgroundColor: colors.surface,

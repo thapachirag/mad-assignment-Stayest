@@ -1,12 +1,21 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-
-import { colors, typography } from "../../theme/theme";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import AppHeader from "../../components/AppHeader";
 import DashboardCard from "../../components/DashboardCard";
-import FeaturedListingsSection from "../../components/FeaturedListingsSection";
+import DashboardSummaryRow from "../../components/DashboardSummaryRow";
+import ListingCard from "../../components/ListingCard";
 import ScreenContainer from "../../components/ScreenContainer";
+import { auth } from "../../config/firebase";
+import { getGuestDashboardSummary } from "../../services/dashboardService";
+import { getAllActiveListings } from "../../services/listingService";
+import { colors, radius, spacing, typography } from "../../theme/theme";
 
 import BookingRequestScreen from "./BookingRequestScreen";
 import GuestBookingsScreen from "./GuestBookingsScreen";
@@ -19,19 +28,74 @@ export default function GuestHomeScreen() {
   const [selectedListing, setSelectedListing] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
 
+  const [summary, setSummary] = useState({
+    requestedBookings: 0,
+    approvedBookings: 0,
+    completedBookings: 0,
+  });
+
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [featuredListings, setFeaturedListings] = useState([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+
+  async function loadDashboardSummary() {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      setSummaryLoading(false);
+      return;
+    }
+
+    try {
+      const result = await getGuestDashboardSummary(currentUser.uid);
+      setSummary(result);
+    } catch (error) {
+      console.log("Failed to load guest dashboard summary:", error);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
+  async function loadFeaturedListings() {
+    try {
+      const results = await getAllActiveListings();
+      setFeaturedListings(results.slice(0, 5));
+    } catch (error) {
+      console.log("Failed to load featured listings:", error);
+      setFeaturedListings([]);
+    } finally {
+      setFeaturedLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadDashboardSummary();
+    loadFeaturedListings();
+  }, []);
+
+  function refreshDashboard() {
+    setSummaryLoading(true);
+    setFeaturedLoading(true);
+    loadDashboardSummary();
+    loadFeaturedListings();
+  }
+
   if (screen === "browse") {
     return (
       <GuestBrowseScreen
-        onBack={() => setScreen("dashboard")}
+        onBack={() => {
+          refreshDashboard();
+          setScreen("dashboard");
+        }}
         onSelectListing={(listing) => {
           setSelectedListing(listing);
-          setScreen("details");
+          setScreen("listingDetails");
         }}
       />
     );
   }
 
-  if (screen === "details" && selectedListing) {
+  if (screen === "listingDetails" && selectedListing) {
     return (
       <ListingDetailsScreen
         listing={selectedListing}
@@ -45,8 +109,11 @@ export default function GuestHomeScreen() {
     return (
       <BookingRequestScreen
         listing={selectedListing}
-        onBack={() => setScreen("details")}
-        onSubmitted={() => setScreen("bookings")}
+        onBack={() => setScreen("listingDetails")}
+        onSubmitted={() => {
+          refreshDashboard();
+          setScreen("bookings");
+        }}
       />
     );
   }
@@ -54,7 +121,10 @@ export default function GuestHomeScreen() {
   if (screen === "bookings") {
     return (
       <GuestBookingsScreen
-        onBack={() => setScreen("dashboard")}
+        onBack={() => {
+          refreshDashboard();
+          setScreen("dashboard");
+        }}
         onLeaveReview={(booking) => {
           setSelectedBooking(booking);
           setScreen("review");
@@ -68,7 +138,11 @@ export default function GuestHomeScreen() {
       <ReviewScreen
         booking={selectedBooking}
         onBack={() => setScreen("bookings")}
-        onSubmitted={() => setScreen("bookings")}
+        onSubmitted={() => {
+          refreshDashboard();
+          setSelectedBooking(null);
+          setScreen("bookings");
+        }}
       />
     );
   }
@@ -77,51 +151,106 @@ export default function GuestHomeScreen() {
     <ScreenContainer scroll>
       <AppHeader />
 
-      <FeaturedListingsSection
-        onBrowseAll={() => setScreen("browse")}
-        onViewListing={(listing) => {
-          setSelectedListing(listing);
-          setScreen("details");
-        }}
+      <View style={styles.header}>
+        <Text style={styles.title}>Find your next stay</Text>
+        <Text style={styles.subtitle}>
+          Browse available properties, request bookings, track your stay status,
+          and leave reviews after completion.
+        </Text>
+      </View>
+
+      <DashboardSummaryRow
+        loading={summaryLoading}
+        items={[
+          {
+            label: "Requested",
+            value: summary.requestedBookings,
+            helper: "Pending host response",
+            accent: "warning",
+          },
+          {
+            label: "Approved",
+            value: summary.approvedBookings,
+            helper: "Upcoming stays",
+            accent: "info",
+          },
+          {
+            label: "Completed",
+            value: summary.completedBookings,
+            helper: "Past stays",
+            accent: "success",
+          },
+        ]}
       />
 
-      <View style={styles.quickActions}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-
-        <DashboardCard
-          title="Browse All Listings"
-          description="Search all available properties and filter by price or guest capacity."
-          meta="Full listing search"
-          accent="info"
-          onPress={() => setScreen("browse")}
-        />
-
-        <DashboardCard
-          title="My Bookings"
-          description="Track booking requests, approval status, countdown indicators, and completed stays."
-          meta="View requested, approved, completed, or disputed bookings"
-          accent="success"
-          onPress={() => setScreen("bookings")}
-        />
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Featured Listings</Text>
+        <Text style={styles.sectionSubtitle}>
+          Swipe sideways to explore recently available properties.
+        </Text>
       </View>
+
+      {featuredLoading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="small" />
+          <Text style={styles.loadingText}>Loading featured listings...</Text>
+        </View>
+      ) : null}
+
+      {!featuredLoading && featuredListings.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyTitle}>No listings yet</Text>
+          <Text style={styles.emptyText}>
+            Active properties created by hosts will appear here.
+          </Text>
+        </View>
+      ) : null}
+
+      {!featuredLoading && featuredListings.length > 0 ? (
+        <FlatList
+          horizontal
+          data={featuredListings}
+          keyExtractor={(item) => item.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carouselContent}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          renderItem={({ item }) => (
+            <View style={styles.carouselItem}>
+              <ListingCard
+                listing={item}
+                onPress={() => {
+                  setSelectedListing(item);
+                  setScreen("listingDetails");
+                }}
+              />
+            </View>
+          )}
+        />
+      ) : null}
+
+      <DashboardCard
+        title="Browse Listings"
+        description="Search available properties, filter by price or guest capacity, and view listing details."
+        meta="Find properties"
+        accent="info"
+        onPress={() => setScreen("browse")}
+      />
+
+      <DashboardCard
+        title="My Bookings"
+        description="Track requested, approved, declined, completed, and disputed bookings."
+        meta="Booking status timeline"
+        accent="success"
+        onPress={() => setScreen("bookings")}
+      />
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: 18,
-  },
-  roleBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.infoLight,
-    color: colors.info,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    fontWeight: "900",
-    marginBottom: 14,
-    overflow: "hidden",
+    marginBottom: spacing.lg,
   },
   title: {
     ...typography.screenTitle,
@@ -134,9 +263,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 12,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
   },
   summaryTitle: {
     fontSize: 16,
@@ -148,14 +277,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     lineHeight: 20,
+    fontWeight: "700",
   },
-  quickActions: {
-    marginTop: 28,
+  sectionHeader: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
     color: colors.textPrimary,
-    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    fontWeight: "700",
+  },
+  carouselContent: {
+    paddingRight: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  carouselItem: {
+    width: 300,
+    marginRight: spacing.md,
+  },
+  loadingBox: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 8,
+    color: colors.textSecondary,
+    fontWeight: "700",
+  },
+  emptyBox: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "900",
+    color: colors.textPrimary,
+    marginBottom: 5,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    fontWeight: "700",
   },
 });

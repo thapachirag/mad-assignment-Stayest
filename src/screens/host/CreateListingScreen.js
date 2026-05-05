@@ -479,7 +479,7 @@ export default function CreateListingScreen({
                     : availableToDate
                 }
                 mode="date"
-                display={Platform.OS === "ios" ? "inline" : "default"}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
                 themeVariant="light"
                 textColor={colors.textPrimary}
                 accentColor={colors.primary}
@@ -653,11 +653,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    padding: spacing.sm,
-    overflow: "hidden",
+    paddingVertical: spacing.sm,
+    paddingHorizontal: 0,
   },
   datePicker: {
     backgroundColor: "#ffffff",
+    width: "100%",
+    alignSelf: "stretch",
   },
   doneButton: {
     backgroundColor: colors.primary,
