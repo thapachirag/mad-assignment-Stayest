@@ -7,12 +7,51 @@ import DashboardSummaryRow from "../../components/DashboardSummaryRow";
 import ScreenContainer from "../../components/ScreenContainer";
 import { auth } from "../../config/firebase";
 import { getHostDashboardSummary } from "../../services/dashboardService";
-import { colors, typography } from "../../theme/theme";
+import { colors, radius, spacing, typography } from "../../theme/theme";
+import { formatPrice } from "../../utils/currencyUtils";
 
 import CreateListingScreen from "./CreateListingScreen";
 import HostBookingRequestsScreen from "./HostBookingRequestsScreen";
 import HostListingsScreen from "./HostListingsScreen";
 import RaiseDisputeScreen from "./RaiseDisputeScreen";
+
+function EarningsSummaryCard({ summary, loading }) {
+  return (
+    <View style={styles.earningsCard}>
+      <View style={styles.earningsHeaderRow}>
+        <View>
+          <Text style={styles.earningsTitle}>Earnings Summary</Text>
+          <Text style={styles.earningsSubtitle}>
+            Based on completed bookings only.
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.earningsMainBox}>
+        <Text style={styles.earningsLabel}>Total Earnings</Text>
+        <Text style={styles.earningsValue}>
+          {loading ? "Loading..." : formatPrice(summary.totalEarnings)}
+        </Text>
+      </View>
+
+      <View style={styles.earningsMetricRow}>
+        <View style={styles.earningsMetricBox}>
+          <Text style={styles.metricLabel}>This Month</Text>
+          <Text style={styles.metricValue}>
+            {loading ? "..." : formatPrice(summary.currentMonthEarnings)}
+          </Text>
+        </View>
+
+        <View style={styles.earningsMetricBox}>
+          <Text style={styles.metricLabel}>Average Booking</Text>
+          <Text style={styles.metricValue}>
+            {loading ? "..." : formatPrice(summary.averageBookingValue)}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function HostHomeScreen() {
   const [screen, setScreen] = useState("dashboard");
@@ -23,6 +62,9 @@ export default function HostHomeScreen() {
     activeListings: 0,
     requestedBookings: 0,
     completedBookings: 0,
+    totalEarnings: 0,
+    currentMonthEarnings: 0,
+    averageBookingValue: 0,
   });
 
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -172,13 +214,7 @@ export default function HostHomeScreen() {
         ]}
       />
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Host Workflow</Text>
-        <Text style={styles.summaryText}>
-          Create listing → Receive request → Approve or decline → Complete stay
-          → Raise dispute if needed
-        </Text>
-      </View>
+      <EarningsSummaryCard summary={summary} loading={summaryLoading} />
 
       <DashboardCard
         title="Manage Listings"
@@ -201,7 +237,7 @@ export default function HostHomeScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: 18,
+    marginBottom: spacing.lg,
   },
   title: {
     ...typography.screenTitle,
@@ -210,13 +246,75 @@ const styles = StyleSheet.create({
     ...typography.body,
     marginTop: 8,
   },
+  earningsCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  earningsHeaderRow: {
+    marginBottom: spacing.md,
+  },
+  earningsTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.textPrimary,
+  },
+  earningsSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  earningsMainBox: {
+    backgroundColor: colors.successLight,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  earningsLabel: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  earningsValue: {
+    fontSize: 28,
+    color: colors.success,
+    fontWeight: "900",
+  },
+  earningsMetricRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  earningsMetricBox: {
+    flex: 1,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: "900",
+    marginBottom: 6,
+  },
+  metricValue: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontWeight: "900",
+  },
   summaryCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 12,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
   },
   summaryTitle: {
     fontSize: 16,
@@ -228,5 +326,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     lineHeight: 20,
+    fontWeight: "700",
   },
 });
